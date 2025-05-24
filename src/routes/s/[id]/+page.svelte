@@ -199,7 +199,7 @@
 
 	onMount(() => {
 		// Add welcome message
-		addServerMessage("Welcome to the chat! Type a message to get started.");
+		addServerMessage("Welcome to the builder, let's start building your project! let us know what you want to build, and we will generate the HTML for you.");
 		scrollToBottom();
 
 		// Cleanup for resize listeners
