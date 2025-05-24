@@ -24,6 +24,7 @@
 	let isLoading = $state(false);
 	let messagesContainer: HTMLElement | undefined = $state();
 	let generatedHtml = $state("");
+	let lastBotRawMessageContent: string | null = $state(null);
 
 	const chatId = $page.params.id;
 	const userId = "user-1"; // This should come from authentication
@@ -79,26 +80,42 @@
 		return thinkingMessage.id;
 	}
 
-	function extractHtmlFromResponse(content: string): string {
-		const htmlMatch = content.match(/\$\$\$HTML\$\$\$([\s\S]*?)\$\$\$HTML\$\$\$/);
-		return htmlMatch ? htmlMatch[1].trim() : "";
+	function extractAndCleanBotResponse(rawContent: string): { html: string | null; displayText: string } {
+		const htmlRegex = /(<!DOCTYPE html>[\s\S]*?<\/html>)/i;
+		const htmlMatch = rawContent.match(htmlRegex);
+
+		if (htmlMatch && htmlMatch[1]) {
+			const extractedHtml = htmlMatch[1].trim();
+			// Remove the matched HTML part and any surrounding newlines/whitespace
+			let displayText = rawContent.replace(htmlRegex, "").trim();
+			
+			// If after removing HTML, the display text is empty, provide a default.
+			if (!displayText) {
+				displayText = "Preview updated. Any further instructions?";
+			}
+			
+			return { html: extractedHtml, displayText: displayText };
+		}
+		// If no HTML block is found, the entire content is considered display text.
+		return { html: null, displayText: rawContent };
 	}
 
 	function replaceThinkingWithBotMessage(
 		thinkingId: string,
-		content: string,
+		rawBotContent: string,
 	): void {
+		lastBotRawMessageContent = rawBotContent;
+		const { html: extractedHtml, displayText } = extractAndCleanBotResponse(rawBotContent);
+
 		const botMessage: BotChatEvent = {
 			id: generateId(),
 			type: "bot",
-			content,
+			content: displayText, // Use cleaned display text
 			timestamp: new Date(),
 		};
 
-		// Extract HTML if present
-		const htmlContent = extractHtmlFromResponse(content);
-		if (htmlContent) {
-			generatedHtml = htmlContent;
+		if (extractedHtml) {
+			generatedHtml = extractedHtml;
 		}
 
 		messages = messages.map((msg) =>
@@ -140,8 +157,9 @@
 		scrollToBottom();
 
 		try {
-			// Send message to API
-			const response = await sendChatMessage(userMessageContent, chatId);
+			// Send message to API, now including lastBotRawMessageContent as context
+			// Note: sendChatMessage in $lib/api.js needs to be updated to accept a third argument for context
+			const response = await sendChatMessage(userMessageContent, chatId, lastBotRawMessageContent);
 
 			if (response.success) {
 				// Replace thinking with bot response
