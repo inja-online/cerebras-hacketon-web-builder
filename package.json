@@ -29,6 +29,15 @@
 		"wrangler": "^4.16.1"
 	},
 	"dependencies": {
-		"@lucide/svelte": "^0.511.0"
+		"@lucide/svelte": "^0.511.0",
+		"highlight.js": "^11.11.1",
+		"mdsvex": "^0.12.6",
+		"mermaid": "^11.6.0",
+		"rehype-highlight": "^7.0.2",
+		"rehype-katex": "^7.0.1",
+		"remark-math": "^6.0.0",
+		"svelte-copy": "^2.0.0",
+		"svelte-exmarkdown": "^5.0.1",
+		"unist-util-visit": "^5.0.0"
 	}
 }

@@ -1,0 +1,495 @@
+<script lang="ts">
+	import { gfmPlugin } from '$lib/components/chat/markdown/gfm';
+	import { highlightPlugin } from './highlight.js';
+	import Markdown from './Markdown.svelte';
+	import rehypeKatex from 'rehype-katex';
+	import remarkMath from 'remark-math';
+	import { CopyButtonPlugin, CopyButtonPluginAdd } from './copyButtonPlugin';
+	import 'katex/dist/katex.min.css';
+	import { Eye, ChevronRight } from '@lucide/svelte';
+
+	// Svelte 5 Props declaration using $props() rune
+	let { message }: { message: any } = $props();
+
+	const plugins = [
+		gfmPlugin(),
+		{
+			remarkPlugin: [CopyButtonPlugin]
+		},
+		{
+			remarkPlugin: [remarkMath],
+			rehypePlugin: [rehypeKatex]
+		},
+		highlightPlugin,
+		{
+			remarkPlugin: [CopyButtonPluginAdd]
+		}
+	];
+
+	function removeStyles(html: any) {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(html, 'text/html');
+
+		// Remove all style attributes
+		const elementsWithStyle = doc.querySelectorAll('[style]');
+		elementsWithStyle.forEach((el) => el.removeAttribute('style'));
+
+		// Remove all class attributes
+		const elementsWithClass = doc.querySelectorAll('[class]');
+		elementsWithClass.forEach((el) => el.removeAttribute('class'));
+
+		return doc.body.innerHTML;
+	}
+
+	function doCopyFromText(event: any) {
+		const e = event as ClipboardEvent;
+		if (typeof window === 'undefined') return;
+		const selection = (window as any).getSelection();
+		const div = document.createElement('div');
+
+		for (let i = 0; i < selection.rangeCount; i++) {
+			const range = selection.getRangeAt(i);
+			const fragment = range.cloneContents();
+			div.appendChild(fragment);
+		}
+
+		const originalContent = div.innerHTML;
+		const styleRemovedContent = removeStyles(originalContent);
+
+		// Set both the original content and the content without styles
+		event.clipboardData.setData('text/html', styleRemovedContent);
+		event.clipboardData.setData('text/plain', selection.toString());
+		event.preventDefault();
+	}
+
+	function processThinkBlocks(content: string) {
+		// Split content by <think> tags
+		const parts = content.split('<think>');
+		const thoughts: { content: string; finished: boolean }[] = [];
+		let mainContent = parts[0]; // Content before first <think>
+
+		// Process each part after a <think> tag
+		for (let i = 1; i < parts.length; i++) {
+			const part = parts[i];
+			const closeTagIndex = part.indexOf('</think>');
+
+			if (closeTagIndex !== -1) {
+				// If there's a closing tag, extract the thought content
+				thoughts.push({
+					content: part.substring(0, closeTagIndex).trim(),
+					finished: true
+				});
+				// Add remaining content to mainContent
+				mainContent += part.substring(closeTagIndex + 8); // 8 is the length of '</think>'
+			} else {
+				// No closing tag - treat as in-progress thought
+				thoughts.push({
+					content: part.trim(),
+					finished: false
+				});
+				// Nothing more to add to mainContent
+			}
+		}
+
+		return {
+			mainContent: mainContent.trim(),
+			thoughts
+		};
+	}
+
+	// Svelte 5 reactivity ($: derived) remains the same
+	let processedMessage = $derived(processThinkBlocks(message?.content || ''));
+</script>
+
+<div class="markdown-container" on:copy={doCopyFromText}>
+	<div class="markdown-content" dir="auto">
+
+		<Markdown md={processedMessage.mainContent} {plugins} />
+	</div>
+
+</div>
+
+<style>
+	/* Define theme variables or replace with static values */
+	:root {
+		--card-bg-light: #ffffff;
+		--card-bg-dark: #1f2937;
+		--secondary-bg-light: #f3f4f6;
+		--secondary-bg-dark: #374151;
+		--secondary-fg-light: #1f2937;
+		--secondary-fg-dark: #d1d5db;
+		--accent-bg-light: #f3f4f6;
+		--accent-bg-dark: #374151;
+		--text-light: #1f2937;
+		--text-dark: #d1d5db;
+		--text-muted-light: #6b7280;
+		--text-muted-dark: #9ca3af;
+		--border-light: #e5e7eb;
+		--border-dark: #374151;
+		--link-color: #4f46e5;
+		--h1-marker-color: #4f46e5;
+		--h2-marker-color: #4f46e5;
+		--h3-marker-color: #3730a3;
+		--code-inline-bg-light: #e5e7eb;
+		--code-inline-bg-dark: #374151;
+		--code-inline-text-light: #000000;
+		--code-inline-text-dark: #d1d5db; /* Adjusted for dark mode */
+		--blockquote-bg-light: #e5e7eb;
+		--blockquote-bg-dark: #374151;
+		--blockquote-border-light: #9ca3af;
+		--blockquote-border-dark: #6b7280;
+		--table-border-light: #1f2937;
+		--table-border-dark: #6b7280;
+		--table-header-bg-light: var(--secondary-bg-light);
+		--table-header-fg-light: var(--secondary-fg-light);
+		--table-header-bg-dark: #030712;
+		--table-header-fg-dark: #d1d5db;
+		--table-row-odd-bg-light: #f3f4f6;
+		--table-row-odd-bg-dark: #374151;
+		--table-row-even-bg-light: #d1d5db;
+		--table-row-even-bg-dark: #4b5563;
+		--scrollbar-thumb: #6b7280;
+		--scrollbar-track: #d1d5db;
+	}
+
+	.markdown-container {
+		font-size: 1.125em; /* prose-lg base */
+		color: var(--text-light);
+	}
+
+	.dark .markdown-container {
+		color: var(--text-dark);
+	}
+
+	/* Styles applied directly to elements generated by Markdown component */
+	.markdown-content a {
+		color: var(--link-color);
+		text-decoration: underline;
+		text-decoration-offset: 0.1em; /* Adjusted from 1em */
+	}
+	.markdown-content a:after {
+		content: '↗';
+		font-size: 0.75rem; /* text-xs */
+		position: relative;
+		margin-left: 0.2em;
+		top: -0.2em; /* Adjusted positioning */
+		display: inline-block;
+		vertical-align: middle;
+	}
+
+	.markdown-content h1,
+	.markdown-content h2,
+	.markdown-content h3 {
+		font-weight: 700; /* font-bold / font-medium */
+	}
+	.markdown-content h1 { font-size: 1.5em; }
+	.markdown-content h2 { font-size: 1.25em; }
+	.markdown-content h3 { font-size: 1.125em; font-weight: 500; }
+
+	.markdown-content h1:before,
+	.markdown-content h2:before,
+	.markdown-content h3:before {
+		content: ' ';
+		display: inline-block;
+		vertical-align: middle;
+		margin-right: 0.3em;
+		height: 0.9em; /* Adjusted for consistency */
+	}
+	.markdown-content h1:before {
+		width: 0.1em;
+		height: 1em;
+		border-radius: 1em;
+		background-color: var(--h1-marker-color);
+	}
+	.markdown-content h2:before {
+		width: 0.2em;
+		margin-top: -0.1em; /* Adjust alignment */
+		background-color: var(--h2-marker-color);
+	}
+	.markdown-content h3:before {
+		width: 0.3em;
+		margin-top: -0.1em; /* Adjust alignment */
+		background-color: var(--h3-marker-color);
+	}
+
+	.markdown-content pre {
+		padding: 0;
+		overflow-x: auto;
+		scrollbar-width: thin;
+		scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+	}
+	.markdown-content pre code {
+		display: block; /* Ensure code block fills pre */
+		overflow-x: auto; /* Should inherit from pre, but explicit */
+		padding: 1em; /* Add padding inside code block */
+		/* Highlight.js theme will handle background/colors */
+	}
+
+	.markdown-content p code {
+		background-color: var(--code-inline-bg-light);
+		color: var(--code-inline-text-light);
+		padding: 0.3em 0.6em 0.26em 0.6em;
+		border-radius: 0.8em;
+		font-weight: lighter;
+		font-size: 0.7em;
+	}
+	.dark .markdown-content p code {
+		background-color: var(--code-inline-bg-dark);
+		color: var(--code-inline-text-dark);
+	}
+
+	.markdown-content ol {
+		list-style-type: decimal;
+		list-style-position: outside;
+		padding-left: 2em;
+	}
+	.markdown-content ul {
+		list-style-type: disc;
+		list-style-position: outside;
+		padding-left: 2em;
+	}
+
+	.markdown-content blockquote {
+		border-left: 0.25em solid var(--blockquote-border-light);
+		border-radius: 0.125rem; /* rounded-sm */
+		padding-left: 1em;
+		font-style: italic;
+		background-color: var(--blockquote-bg-light);
+		margin: 1em 0; /* Add some margin */
+	}
+	.dark .markdown-content blockquote {
+		border-left-color: var(--blockquote-border-dark);
+		background-color: var(--blockquote-bg-dark);
+	}
+	.markdown-content blockquote p {
+		color: var(--text-light); /* Inherit */
+		margin: 0; /* Remove default p margin inside blockquote */
+	}
+	.dark .markdown-content blockquote p {
+		color: var(--text-dark); /* Inherit */
+	}
+
+	.markdown-content img {
+		width: 100%;
+		box-sizing: border-box;
+		position: relative;
+		max-width: 100%; /* Ensure images don't overflow */
+		height: auto;
+	}
+	/* Alt text display removed as it relies on complex positioning and might interfere with actual images */
+
+	.markdown-content table {
+		width: 100%;
+		display: block;
+		overflow-x: auto;
+		scrollbar-width: thin;
+		scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+		margin-bottom: 1rem;
+		padding: 0;
+		border-collapse: collapse;
+		border: 1px solid var(--table-border-light);
+	}
+	.dark .markdown-content table {
+		border-color: var(--table-border-dark);
+	}
+
+	.markdown-content table tr {
+		border-top: 1px solid var(--table-border-light);
+		margin: 0;
+		padding: 0;
+		background-color: var(--table-row-odd-bg-light);
+		color: var(--text-light);
+	}
+	.dark .markdown-content table tr {
+		border-top-color: var(--table-border-dark);
+		background-color: var(--table-row-odd-bg-dark);
+		color: var(--text-dark);
+	}
+
+	.markdown-content table tr:nth-child(2n) {
+		background-color: var(--table-row-even-bg-light);
+	}
+	.dark .markdown-content table tr:nth-child(2n) {
+		background-color: var(--table-row-even-bg-dark);
+	}
+
+	.markdown-content table th,
+	.markdown-content table td {
+		border: 1px solid var(--table-border-light);
+		text-align: left;
+		margin: 0;
+		padding: 6px 13px;
+	}
+	.dark .markdown-content table th,
+	.dark .markdown-content table td {
+		border-color: var(--table-border-dark);
+	}
+
+	.markdown-content table th {
+		font-weight: 700;
+		background-color: var(--table-header-bg-light);
+		color: var(--table-header-fg-light);
+	}
+	.dark .markdown-content table th {
+		background-color: var(--table-header-bg-dark);
+		color: var(--table-header-fg-dark);
+	}
+
+	/* Think Process Styling */
+	.think-processes {
+		margin-bottom: 1rem; /* mb-4 */
+	}
+	.thought-content {
+		padding-left: 1rem; /* pl-4 */
+	}
+	/* Assuming Collapse component handles its own content background/padding */
+	/* If not, add styles for .think-processes > :global(.collapse-content) */
+	/* e.g., background-color: var(--secondary-bg-light); padding: 1rem; border-radius: 0.375rem; */
+	/* .dark .think-processes > :global(.collapse-content) { background-color: var(--secondary-bg-dark); } */
+
+
+	/* Search Results Styling */
+	/* Assuming Collapse component handles its own content background/padding */
+	/* If not, add styles for .search-results-collapse > :global(.collapse-content) */
+	/* e.g., background-color: #f9fafb; padding: 1rem; border-radius: 0.375rem; */
+	/* .dark .search-results-collapse > :global(.collapse-content) { background-color: var(--card-bg-dark); } */
+
+	.search-results-intro {
+		padding: 0.5rem; /* p-2 */
+		background-color: var(--secondary-bg-light); /* bg-muted approximation */
+		border-radius: 0.375rem; /* rounded-md */
+		margin-bottom: 0.5rem;
+	}
+	.dark .search-results-intro {
+		background-color: var(--secondary-bg-dark);
+	}
+	.search-results-intro p {
+		margin: 0;
+	}
+
+	.search-results-container {
+		display: grid;
+		grid-template-columns: repeat(1, minmax(0, 1fr));
+		gap: 1rem; /* gap-4 */
+		margin-top: 0.5rem; /* mt-2 */
+		padding: 0.5rem; /* p-2 */
+	}
+	@media (min-width: 768px) { /* md: */
+		.search-results-container {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	.search-result-card {
+		border: 1px solid var(--border-light); /* border */
+		border-radius: 0.5rem; /* rounded-lg */
+		padding: 1rem; /* p-4 */
+		background-color: var(--card-bg-light); /* bg-card */
+		box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+		transition: box-shadow 0.2s ease-in-out; /* transition-shadow */
+		position: relative;
+		cursor: pointer;
+		text-align: left;
+		width: 100%; /* Ensure button takes full grid width */
+		box-sizing: border-box;
+	}
+	.dark .search-result-card {
+		border-color: var(--border-dark);
+		background-color: var(--card-bg-dark);
+	}
+	.search-result-card:hover {
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* hover:shadow-md */
+	}
+
+	.search-result-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.5rem; /* mb-2 */
+	}
+
+	.search-result-title {
+		font-weight: 500; /* font-medium */
+		font-size: 1.125rem; /* text-lg */
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis; /* truncate */
+		margin-top: 0;
+		max-width: calc(100% - 3rem); /* Ensure space for button */
+	}
+
+	.search-result-metadata {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem; /* gap-2 */
+		margin-bottom: 0.5rem; /* mb-2 */
+	}
+
+	.metadata-tag {
+		font-size: 0.75rem; /* text-xs */
+		padding: 0.25rem 0.5rem; /* py-1 px-2 */
+		border-radius: 0.375rem; /* rounded-md */
+		background-color: var(--secondary-bg-light); /* bg-secondary */
+		color: var(--secondary-fg-light); /* text-secondary-foreground */
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.dark .metadata-tag {
+		background-color: var(--secondary-bg-dark);
+		color: var(--secondary-fg-dark);
+	}
+
+	.search-result-content {
+		font-size: 0.875rem; /* text-sm */
+		color: var(--text-muted-light); /* text-muted-foreground */
+		margin-top: 0.5rem; /* mt-2 */
+		max-height: 100px;
+		overflow: hidden;
+		position: relative;
+	}
+	.dark .search-result-content {
+		color: var(--text-muted-dark);
+	}
+	.search-result-content p {
+		margin: 0; /* m-0 */
+	}
+	.search-result-content::after {
+		content: '';
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 20px;
+		background: linear-gradient(to bottom, transparent, var(--card-bg-light));
+	}
+	.dark .search-result-content::after {
+		background: linear-gradient(to bottom, transparent, var(--card-bg-dark));
+	}
+
+	.view-reference-btn {
+		padding: 0.5rem; /* p-2 */
+		border-radius: 9999px; /* rounded-full */
+		transition: background-color 0.2s ease-in-out; /* transition-colors */
+		background: none;
+		border: none;
+		cursor: pointer;
+		line-height: 0; /* Prevent extra space */
+	}
+	.view-reference-btn:hover {
+		background-color: var(--accent-bg-light); /* hover:bg-accent */
+	}
+	.dark .view-reference-btn:hover {
+		background-color: var(--accent-bg-dark);
+	}
+	.view-reference-btn .icon-wrapper {
+		width: 1rem; /* w-4 */
+		height: 1rem; /* h-4 */
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+</style>
