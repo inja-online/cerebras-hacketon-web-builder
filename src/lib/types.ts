@@ -11,7 +11,7 @@ export interface BaseChatEvent {
 export interface UserChatEvent extends BaseChatEvent {
   type: 'user';
   userId: string;
-  avatar?: string | null;
+  avatar?: string;
   content: string;
 }
 
@@ -20,12 +20,8 @@ export interface BotChatEvent extends BaseChatEvent {
   type: 'bot';
   content: string;
   config?: {
-    sources?: Array<{
-      title: string;
-      url: string;
-    }>;
+    sources?: string[];
     requiresFeedback?: boolean;
-    [key: string]: any; // Allow for additional config properties
   };
 }
 
@@ -42,6 +38,18 @@ export interface ServerChatEvent extends BaseChatEvent {
 
 // Union type for all possible chat events
 export type ChatEvent = UserChatEvent | BotChatEvent | ThinkingChatEvent | ServerChatEvent;
+
+// API request/response types
+export interface ChatRequest {
+  message: string;
+  chatId: string;
+}
+
+export interface ChatResponse {
+  content: string;
+  success: boolean;
+  error?: string;
+}
 
 // Project types
 export interface Project {

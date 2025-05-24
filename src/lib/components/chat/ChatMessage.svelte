@@ -3,7 +3,7 @@
     import BotMessage from "./messages/BotMessage.svelte";
     import ServerMessage from "./messages/ServerMessage.svelte";
     import ThinkingMessage from "./messages/ThinkingMessage.svelte";
-    import type { ChatEvent } from "./markdown/types";
+    import type { ChatEvent } from "$lib/types";
 
     interface Props {
         event: ChatEvent;
