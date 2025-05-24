@@ -23,6 +23,7 @@
 	let messageInput = $state("");
 	let isLoading = $state(false);
 	let messagesContainer: HTMLElement | undefined = $state();
+	let generatedHtml = $state("");
 
 	const chatId = $page.params.id;
 	const userId = "user-1"; // This should come from authentication
@@ -78,6 +79,11 @@
 		return thinkingMessage.id;
 	}
 
+	function extractHtmlFromResponse(content: string): string {
+		const htmlMatch = content.match(/\$\$\$HTML\$\$\$([\s\S]*?)\$\$\$HTML\$\$\$/);
+		return htmlMatch ? htmlMatch[1].trim() : "";
+	}
+
 	function replaceThinkingWithBotMessage(
 		thinkingId: string,
 		content: string,
@@ -88,6 +94,12 @@
 			content,
 			timestamp: new Date(),
 		};
+
+		// Extract HTML if present
+		const htmlContent = extractHtmlFromResponse(content);
+		if (htmlContent) {
+			generatedHtml = htmlContent;
+		}
 
 		messages = messages.map((msg) =>
 			msg.id === thinkingId ? botMessage : msg,
@@ -196,14 +208,24 @@
 			style="width: {leftPanelWidth}%"
 		>
 			<div class="p-6 border-b border-primary-accent">
-				<span class="text-white font-medium">iframe</span>
+				<span class="text-white font-medium">Preview</span>
 			</div>
 
 			<!-- Iframe Container -->
 			<div
-				class="flex-1 bg-dark-primary m-6 border border-primary-accent rounded-md p-4 flex items-center justify-center"
+				class="flex-1 bg-white m-6 border border-primary-accent rounded-md overflow-hidden"
 			>
-				<span class="text-muted">Content will load here</span>
+				{#if generatedHtml}
+					<iframe
+						srcdoc={generatedHtml}
+						class="w-full h-full border-0"
+						title="Generated HTML Preview"
+					></iframe>
+				{:else}
+					<div class="flex items-center justify-center h-full">
+						<span class="text-zinc-500">Start a conversation to generate content</span>
+					</div>
+				{/if}
 			</div>
 
 			<!-- Attribution -->

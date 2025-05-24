@@ -1,3 +1,5 @@
+import { getSystemPrompt } from '../prompts.server';
+
 const VITE_OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
@@ -14,13 +16,12 @@ interface ChatCompletionResponse {
 }
 
 export async function getChatCompletion(
-    systemPrompt: string,
     chatHistory: ChatMessage[]
 ): Promise<ChatCompletionResponse> {
     const url = 'https://openrouter.ai/api/v1/chat/completions';
 
     const messages = [
-        { role: 'system' as const, content: systemPrompt },
+        { role: 'system' as const, content: getSystemPrompt() },
         ...chatHistory
     ];
 
