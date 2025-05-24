@@ -1,0 +1,14 @@
+send_metrics = false
+
+name = "web-builder"
+main = "./.svelte-kit/cloudflare/_worker.js"
+
+
+compatibility_date = "2023-10-19"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+
+[env.production]
+workers_dev = false
+route = "builder.inja.online/*"

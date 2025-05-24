@@ -9,7 +9,9 @@
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"deploy": "wrangler deploy",
+		"push": "npm run build && npm run deploy"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-cloudflare": "^7.0.0",
@@ -22,6 +24,7 @@
 		"svelte-check": "^4.0.0",
 		"tailwindcss": "^4.0.0",
 		"typescript": "^5.0.0",
-		"vite": "^6.2.6"
+		"vite": "^6.2.6",
+		"wrangler": "^4.16.1"
 	}
 }
