@@ -147,3 +147,16 @@ body {
   position: relative; /* Ensure text is above the glow effect */
   z-index: 1;
 }
+
+/* Resize handle styles */
+.cursor-col-resize {
+  cursor: col-resize;
+}
+
+/* Prevent text selection during resize */
+body.select-none {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
