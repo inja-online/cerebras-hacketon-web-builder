@@ -26,5 +26,8 @@
 		"typescript": "^5.0.0",
 		"vite": "^6.2.6",
 		"wrangler": "^4.16.1"
+	},
+	"dependencies": {
+		"@lucide/svelte": "^0.511.0"
 	}
 }
