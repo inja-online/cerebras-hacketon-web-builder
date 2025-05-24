@@ -1,3 +1,7 @@
+<script>
+  import MainPageInput from '$lib/components/MainPageInput.svelte';
+</script>
+
 <div class="min-h-screen bg-dark-primary text-white p-8 flex flex-col">
   <!-- Top Section with Brand and Blog Link -->
   <div class="flex justify-between items-start mb-16">
@@ -16,19 +20,7 @@
       </h2>
 
       <!-- Simplified Input Area -->
-      <div class="space-y-4">
-        <textarea 
-          placeholder="Describe your idea..."
-          class="w-full h-24 bg-dark-secondary border border-primary-accent/20 rounded-lg p-4 text-white placeholder-text-muted resize-none focus:outline-none focus:border-primary-accent/40 transition-colors duration-200"
-        ></textarea>
-        
-        <!-- Minimal Button -->
-        <div class="flex justify-end">
-          <button class="bg-white text-black px-6 py-2 rounded-md text-sm font-medium hover:bg-primary-accent hover:text-black transition-colors duration-200">
-            Build
-          </button>
-        </div>
-      </div>
+      <MainPageInput />
     </div>
   </div>
 
