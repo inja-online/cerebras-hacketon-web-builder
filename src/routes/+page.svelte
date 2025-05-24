@@ -1,5 +1,6 @@
 <script>
   import MainPageInput from '$lib/components/MainPageInput.svelte';
+  import RecentProjects from '$lib/components/RecentProjects.svelte';
 </script>
 
 <div class="min-h-screen bg-dark-primary text-white p-8 flex flex-col">
@@ -13,7 +14,7 @@
 
   <!-- Main Content Container -->
   <div class="flex-1 flex items-center justify-center">
-    <div class="w-full max-w-2xl space-y-8">
+    <div class="w-full max-w-2xl space-y-12">
       <!-- Minimal Headline -->
       <h2 class="text-3xl font-light text-white text-center">
         Build the web together
@@ -21,6 +22,9 @@
 
       <!-- Simplified Input Area -->
       <MainPageInput />
+
+      <!-- Recent Projects Section -->
+      <RecentProjects />
     </div>
   </div>
 
