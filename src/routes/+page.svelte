@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { settingsStorage } from '$lib/storage';
+	import { Settings } from '@lucide/svelte';
   import MainPageInput from '$lib/components/MainPageInput.svelte';
   import RecentProjects from '$lib/components/RecentProjects.svelte';
 	const apiKeyStorageKey = 'openrouter_api_key';
@@ -22,9 +23,15 @@
     <!-- Top Section with Brand and Blog Link -->
     <div class="flex justify-between items-start mb-16">
       <a href="https://inja.online" target="_blank" class="text-2xl font-medium text-primary-accent tracking-wide">INJA.ONLINE</a>
-      <a href="#" class="text-sm text-primary-accent hover:text-white transition-colors duration-200">
-        read the blog on how we build this
-      </a>
+      <div class="flex items-center space-x-4">
+        <a href="#" class="text-sm text-primary-accent hover:text-white transition-colors duration-200">
+          read the blog on how we build this
+        </a>
+        <a href="/settings" class="text-sm text-zinc-400 hover:text-white transition-colors duration-200 flex items-center gap-2">
+          <Settings size={16} />
+          Settings
+        </a>
+      </div>
     </div>
   
     <!-- Main Content Container -->
