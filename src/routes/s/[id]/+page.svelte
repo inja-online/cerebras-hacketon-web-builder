@@ -11,6 +11,7 @@
 	} from "$lib/types.js";
 	import Header from "$lib/components/Header.svelte";
 	import Footer from "$lib/components/Footer.svelte";
+	import { browser } from "$app/environment";
 
 	// Original resizing state
 	let leftPanelWidth = $state(70);
@@ -287,11 +288,28 @@
 	}
 
 	onMount(() => {
-		// Add welcome message
+		const id = $page.params.id;
+		
+		// Add welcome message first
 		addServerMessage(
 			"Welcome to the builder! Describe what you want to build, or use the 'Refine' button with instructions if you have existing HTML.",
 		);
 		scrollToBottom();
+		
+		if (id === 'new' && browser) {
+			// Read prompt from localStorage
+			const storedPrompt = localStorage.getItem('currentPrompt');
+			if (storedPrompt) {
+				// Clear the localStorage after reading
+				localStorage.removeItem('currentPrompt');
+				// Set the prompt as input and automatically send it
+				messageInput = storedPrompt;
+				// Start the chat workflow automatically
+				setTimeout(() => {
+					handleSendMessage();
+				}, 500); // Small delay to ensure UI is ready
+			}
+		}
 
 		// Cleanup for resize listeners
 		return () => {
@@ -299,6 +317,29 @@
 			document.removeEventListener("mouseup", stopResize);
 		};
 	});
+
+	function startBuilding() {
+		if (!messageInput.trim()) return;
+		
+		isLoading = true;
+		try {
+			// TODO: Implement your building logic here
+			// This could be an API call to generate the website
+			console.log('Building with prompt:', messageInput);
+			
+			// Simulated building process
+			setTimeout(() => {
+				addServerMessage('Website built successfully!');
+				isLoading = false;
+				scrollToBottom();
+			}, 2000);
+		} catch (error) {
+			console.error('Building failed:', error);
+			addServerMessage('Building failed. Please try again.');
+			isLoading = false;
+			scrollToBottom();
+		}
+	}
 </script>
 
 <svelte:head>

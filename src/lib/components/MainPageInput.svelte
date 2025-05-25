@@ -1,11 +1,28 @@
+<script>
+  import { goto } from '$app/navigation';
+  
+  let prompt = '';
+  
+  function handleSubmit() {
+    if (!prompt.trim()) return;
+    
+    // Store prompt in localStorage
+    localStorage.setItem('currentPrompt', prompt.trim());
+    
+    // Navigate to /s/new
+    goto('/s/new');
+  }
+</script>
+
 <div class="space-y-4">
   <textarea 
+    bind:value={prompt}
     placeholder="Describe your idea..."
     class="w-full h-24 bg-dark-secondary border border-primary-accent/20 rounded-lg p-4 text-white placeholder-text-muted resize-none focus:outline-none focus:border-primary-accent/40 transition-colors duration-200"
   ></textarea>
   
   <div class="flex justify-end">
-    <button class="button">
+    <button class="button" onclick={handleSubmit} disabled={!prompt.trim()}>
       <div class="dots_border"></div>
       <svg
         xmlns="http://www.w3.org/2000/svg"

@@ -5,19 +5,13 @@ const config = {
 	preprocess: vitePreprocess(),
 	kit: {
 		adapter: adapter({
-			routes: {
-				include: ["/*"],
-				exclude: ["<all>"],
-			},
+			config: undefined,
 			platformProxy: {
-				configPath: "wrangler.toml",
+				configPath: undefined,
 				environment: undefined,
-				experimentalJsonConfig: false,
-				persist: false,
-			},
+				persist: undefined
+			}
 		}),
-
-
 		prerender: {
 			entries: ["/"],
 		},
