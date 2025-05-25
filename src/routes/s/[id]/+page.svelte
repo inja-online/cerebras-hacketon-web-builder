@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { GripVertical, Settings } from "@lucide/svelte";
+	import { GripVertical, Settings, Download } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { page } from "$app/stores";
 	import { projectStorage, chatEventStorage, settingsStorage } from "$lib/storage";
@@ -408,6 +408,22 @@
 	// Use generatedHtml for iframeSrcDoc directly
 	let iframeSrcDoc = $derived(generatedHtml);
 
+	function handleDownloadHtml() {
+		if (!generatedHtml || generatedHtml.trim() === "<!-- Start by typing a command to create your page. -->" || generatedHtml.trim() === "") {
+			addServerMessage("Nothing to download. Generate some content first.");
+			return;
+		}
+		const blob = new Blob([generatedHtml], { type: 'text/html' });
+		const link = document.createElement('a');
+		link.href = URL.createObjectURL(blob);
+		link.download = 'index.html';
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(link.href);
+		addServerMessage("HTML content downloaded as index.html");
+	}
+
 	function startBuilding() {
 		if (!messageInput.trim()) return;
 		
@@ -461,8 +477,16 @@
 			class="bg-dark-secondary border-r border-primary-accent flex flex-col"
 			style="width: {leftPanelWidth}%"
 		>
-			<div class="p-6 border-b border-primary-accent">
+			<div class="p-6 border-b border-primary-accent flex justify-between items-center">
 				<span class="text-white font-medium">Preview</span>
+				<button
+					onclick={handleDownloadHtml}
+					disabled={!generatedHtml || generatedHtml.includes("Start by typing")}
+					class="text-zinc-400 hover:text-white disabled:text-zinc-600 disabled:cursor-not-allowed transition-colors duration-200"
+					title={(!generatedHtml || generatedHtml.includes("Start by typing")) ? "Generate content to enable download" : "Download HTML"}
+				>
+					<Download size={20} />
+				</button>
 			</div>
 
 			<!-- Iframe Container -->
