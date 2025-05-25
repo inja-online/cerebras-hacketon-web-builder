@@ -7,7 +7,7 @@
 >
 	<div class="flex items-center gap-2">
 		<h1 class="text-2xl font-medium text-white flex items-center">
-            <span class="base-text mr-2">INJA.ONLINE</span><span class="builder-container"><span class="builder-text"> / Builder</span></span>
+            <a href="https://inja.online" target="_blank" class="base-text mr-2">INJA.ONLINE</a><span class="builder-container"><span class="builder-text"> / Builder</span></span>
         </h1>
 	</div>
 </header>

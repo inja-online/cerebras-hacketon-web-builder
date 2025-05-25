@@ -1,0 +1,102 @@
+import { settingsStorage } from '$lib/storage';
+import { getSystemPrompt, getInitialPrompt, getRefinementPrompt } from './prompts';
+
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const API_KEY_STORAGE_KEY = 'openrouter_api_key';
+
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+export interface ChatCompletionResponse {
+  choices: Array<{
+    message: {
+      content: string;
+      role: string;
+    };
+  }>;
+  // Add other fields if necessary, like 'id', 'model', 'usage', etc.
+}
+
+async function getApiKey(): Promise<string> {
+  const apiKey = await settingsStorage.getSetting<string>(API_KEY_STORAGE_KEY);
+  if (!apiKey) {
+    throw new Error('OpenRouter API key not found. Please set it in the application settings.');
+  }
+  return apiKey;
+}
+
+export function extractHtmlContent(content: string): string {
+  let result = content;
+  if (result.startsWith('```html')) {
+    result = result.slice(7);
+  }
+  if (result.endsWith('```')) {
+    result = result.slice(0, -3);
+  }
+  return result.trim();
+}
+
+async function callOpenRouterApi(
+  messages: ChatMessage[],
+  model: string = 'qwen/qwen3-32b' // Default model
+): Promise<string> {
+  const apiKey = await getApiKey();
+
+  const headers = {
+    'Authorization': `Bearer ${apiKey}`,
+    'Content-Type': 'application/json'
+  };
+
+  const body = {
+    model: model,
+    provider: { // Specify provider if needed, or remove if model implies it
+        only: ['Cerebras']
+    },
+    messages
+  };
+
+  try {
+    const response = await fetch(OPENROUTER_API_URL, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error('OpenRouter API error response:', errorBody);
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorBody}`);
+    }
+
+    const data: ChatCompletionResponse = await response.json();
+
+    if (data.choices && data.choices.length > 0 && data.choices[0].message.content) {
+      return data.choices[0].message.content;
+    } else {
+      throw new Error('No content in OpenRouter API response');
+    }
+  } catch (error) {
+    console.error('Error calling OpenRouter API:', error);
+    throw error; // Re-throw to be handled by the caller
+  }
+}
+
+export async function createInitialPage(userPrompt: string): Promise<string> {
+  const messages: ChatMessage[] = [
+    { role: 'system', content: getSystemPrompt() },
+    { role: 'user', content: getInitialPrompt(userPrompt) }
+  ];
+  const rawContent = await callOpenRouterApi(messages);
+  return extractHtmlContent(rawContent);
+}
+
+export async function refinePage(originalHtml: string, userRequest: string): Promise<string> {
+  const messages: ChatMessage[] = [
+    { role: 'system', content: getSystemPrompt() },
+    { role: 'user', content: getRefinementPrompt(originalHtml, userRequest) }
+  ];
+  const rawContent = await callOpenRouterApi(messages);
+  return extractHtmlContent(rawContent);
+}

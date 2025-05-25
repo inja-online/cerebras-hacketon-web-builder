@@ -21,7 +21,7 @@
 	{#if apiKeyPresent}
     <!-- Top Section with Brand and Blog Link -->
     <div class="flex justify-between items-start mb-16">
-      <h1 class="text-2xl font-medium text-primary-accent tracking-wide">INJA.ONLINE</h1>
+      <a href="https://inja.online" target="_blank" class="text-2xl font-medium text-primary-accent tracking-wide">INJA.ONLINE</a>
       <a href="#" class="text-sm text-primary-accent hover:text-white transition-colors duration-200">
         read the blog on how we build this
       </a>
@@ -46,7 +46,7 @@
     <!-- Bottom Attribution -->
     <div class="text-center">
       <p class="text-text-muted text-xs">
-        Powered by Cerebras API
+        Powered by Cerebras and OpenRouter API.
       </p>
     </div>
 	{:else}

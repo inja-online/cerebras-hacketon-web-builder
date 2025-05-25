@@ -2,6 +2,8 @@
 	import { GripVertical } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { page } from "$app/stores";
+	import { projectStorage, chatEventStorage, settingsStorage } from "$lib/storage";
+	import { goto } from "$app/navigation";
 	import type {
 		ChatEvent,
 		UserChatEvent,
@@ -12,9 +14,9 @@
 	} from "$lib/types.js";
 	import Header from "$lib/components/Header.svelte";
 	import Footer from "$lib/components/Footer.svelte";
-	import { browser } from "$app/environment";
-	import { projectStorage, chatEventStorage } from "$lib/storage";
-	import { goto } from "$app/navigation";
+	import { createInitialPage, refinePage } from "$lib/apis/openrouter"; // Import the new client-side functions
+
+	const apiKeyStorageKey = 'openrouter_api_key';
 
 	// Original resizing state
 	let leftPanelWidth = $state(70);
@@ -26,12 +28,12 @@
 	let messageInput = $state("");
 	let isLoading = $state(false);
 	let messagesContainer: HTMLElement | undefined = $state();
-	let generatedHtml = $state("");
+	let generatedHtml = $state("<!-- Start by typing a command to create your page. -->"); // Initialize with a placeholder
 	let lastBotRawMessageContent: string | null = $state(null);
 	let currentProject: Project | null | undefined = $state(null);
 
-	const projectId = $page.params.id; // This is the project ID
-	const userId = "user-1"; // This should come from authentication
+	const projectId = $page.params.id; 
+	const userId = "user-1"; 
 
 	// Original resizing functions
 	function startResize(e) {
@@ -92,56 +94,51 @@
 	}
 
 	function extractAndCleanBotResponse(rawContent: string): { html: string | null; displayText: string } {
-		const htmlRegex = /(<!DOCTYPE html>[\s\S]*?<\/html>)/i;
-		const htmlMatch = rawContent.match(htmlRegex);
-
-		if (htmlMatch && htmlMatch[1]) {
-			const extractedHtml = htmlMatch[1].trim();
-			// Remove the matched HTML part and any surrounding newlines/whitespace
-			let displayText = rawContent.replace(htmlRegex, "").trim();
-			
-			// If after removing HTML, the display text is empty, provide a default.
-			if (!displayText) {
-				displayText = "Preview updated. Any further instructions?";
-			}
-			
-			return { html: extractedHtml, displayText: displayText };
+		// Assuming rawContent from createInitialPage and refinePage is already clean HTML
+		// If it might contain other text, this function might need to be more robust
+		// For now, assume it's primarily HTML.
+		const isHtml = rawContent.toLowerCase().includes('<!doctype html>') || rawContent.toLowerCase().includes('<html');
+		if (isHtml) {
+			return { html: rawContent, displayText: "Preview updated. What's next?" };
 		}
-		// If no HTML block is found, the entire content is considered display text.
+		// If not clearly HTML, treat as plain text response
 		return { html: null, displayText: rawContent };
 	}
 
 	async function storeAndReplaceThinkingWithBotMessage(
 		thinkingId: string,
 		rawBotContent: string,
+		isRefinement: boolean = false,
 	): Promise<void> {
 		lastBotRawMessageContent = rawBotContent;
-		const { html: extractedHtml, displayText } = extractAndCleanBotResponse(rawBotContent);
+		// Use a simpler display text since the rawBotContent is now expected to be mostly HTML
+		const displayText = isRefinement ? "Preview refined. Any further instructions?" : "Page created/updated. What's next?";
 
 		const botMessage: BotChatEvent = {
-			id: generateId(), // Use a new ID for the bot message
+			id: generateId(), 
 			type: "bot",
 			content: displayText,
-			rawContent: rawBotContent, // Store the raw content
+			rawContent: rawBotContent, 
 			timestamp: new Date(),
 			projectId: projectId,
 		};
 
-		if (extractedHtml) {
-			generatedHtml = extractedHtml;
-		}
+		// The rawBotContent itself is the HTML for createInitialPage and refinePage
+		generatedHtml = rawBotContent;
+
 
 		messages = messages.map((msg) =>
 			msg.id === thinkingId ? botMessage : msg,
 		);
 		
 		try {
-			// If the thinking message was temporary and not stored, store the new bot message.
-			// If thinking messages were stored, you might want to update it instead.
-			// For simplicity, we assume thinking messages are not stored, and bot messages are new entries.
 			await chatEventStorage.store(botMessage, projectId);
+			if (currentProject?.id) {
+				await projectStorage.update(currentProject.id, { htmlContent: generatedHtml });
+			}
 		} catch (error) {
-			console.error("Failed to store bot message:", error);
+			console.error("Failed to store bot message or update project:", error);
+			addServerMessage("Error: Could not save changes.");
 		}
 	}
 
@@ -165,64 +162,29 @@
 
 	async function handleSendMessage(): Promise<void> {
 		if (!messageInput.trim() || isLoading) return;
+		if (!await checkApiKey()) return;
 
 		const userMessageContent = messageInput.trim();
 		messageInput = "";
 		isLoading = true;
 
-		// Add and store user message
 		await storeAndAddUserMessage(userMessageContent);
 		scrollToBottom();
 
-		// Add thinking indicator
 		const thinkingId = addThinkingMessage();
 		scrollToBottom();
 
 		try {
-			// Build chat history from current messages state (already includes the new user message)
-			const chatHistoryForAPI = messages
-				.filter(msg => (msg.type === "user" || msg.type === "bot") && msg.projectId === projectId)
-				.map(msg => ({
-					role: msg.type === "user" ? "user" : "assistant" as const,
-					// Ensure content being sent is what the API expects (e.g., just text for 'user' role)
-					content: msg.type === 'user' ? (msg as UserChatEvent).content : (msg as BotChatEvent).content
-				}));
+			// Call client-side API for creating initial page
+			const newHtmlContent = await createInitialPage(userMessageContent);
 			
-			// The latest user message is already in `messages` and thus in `chatHistoryForAPI`
+			await storeAndReplaceThinkingWithBotMessage(thinkingId, newHtmlContent, false);
 
-			const response = await fetch('/api/create', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ chatHistory: chatHistoryForAPI, projectId: projectId }) 
-			});
-
-			const result = await response.json();
-
-			if (result.success) {
-				// result.rawContent contains the full response, result.content is the extracted HTML
-				const botRawResponse = result.rawContent || (typeof result.content === 'string' && result.content.includes('<!DOCTYPE html>') ? result.content : `Generated: ${result.content}`);
-				
-				// Update generatedHtml with the clean HTML if available from result.content
-				if (result.content && typeof result.content === 'string' && result.content.includes('<!DOCTYPE html>')) {
-					generatedHtml = result.content;
-				}
-				
-				await storeAndReplaceThinkingWithBotMessage(thinkingId, botRawResponse);
-			} else {
-				// Remove thinking and add error message
-				messages = messages.filter((msg) => msg.id !== thinkingId);
-				addServerMessage(
-					`Error: ${result.error || "Failed to get response"}`,
-				);
-			}
-		} catch (error) {
-			// Remove thinking and add error message
+		} catch (error: any) {
 			messages = messages.filter((msg) => msg.id !== thinkingId);
-			addServerMessage(
-				"Error: Failed to send message. Please try again.",
-			);
+			const errorMsg = error.message || "Failed to create page. Please try again.";
+			addServerMessage(`Error: ${errorMsg}`);
+			console.error("Create page error:", error);
 		} finally {
 			isLoading = false;
 			scrollToBottom();
@@ -231,65 +193,29 @@
 
 	async function handleRefine(): Promise<void> {
 		if (!messageInput.trim() || isLoading || !generatedHtml) return;
+		if (!await checkApiKey()) return;
 
 		const refineInstruction = messageInput.trim();
-		messageInput = ""; // Clear input after initiating refine
+		messageInput = ""; 
 		isLoading = true;
 
-		// Add and store user message for refinement
 		await storeAndAddUserMessage(refineInstruction, "Refine");
 		scrollToBottom();
 
-		// Add thinking indicator
 		const thinkingId = addThinkingMessage();
 		scrollToBottom();
 
 		try {
-			const response = await fetch('/api/refine', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ 
-					originalHtml: generatedHtml, 
-					userRequest: refineInstruction,
-					projectId: projectId // Pass projectId if API needs it
-				})
-			});
+			// Call client-side API for refining content
+			const refinedHtmlContent = await refinePage(generatedHtml, refineInstruction);
 
-			const result = await response.json();
-
-			if (result.success && result.content) {
-				generatedHtml = result.content; // result.content is the refined HTML
-				
-				const botRefineMessage: BotChatEvent = {
-					id: generateId(),
-					type: "bot",
-					content: "Preview updated with refinements. What's next?",
-					rawContent: result.content, // Store the refined HTML as rawContent
-					timestamp: new Date(),
-					projectId: projectId,
-				};
-
-				messages = messages.map((msg) =>
-					msg.id === thinkingId
-						? botRefineMessage
-						: msg,
-				);
-				await chatEventStorage.store(botRefineMessage, projectId);
-				lastBotRawMessageContent = result.content; 
-			} else {
-				// Remove thinking and add error message
-				messages = messages.filter((msg) => msg.id !== thinkingId);
-				addServerMessage(
-					`Error refining: ${result.error || "Failed to get refined HTML"}`,
-				);
-			}
-		} catch (error) {
+			await storeAndReplaceThinkingWithBotMessage(thinkingId, refinedHtmlContent, true);
+			
+		} catch (error: any) {
 			messages = messages.filter((msg) => msg.id !== thinkingId);
-			addServerMessage(
-				"Error: Failed to send refine request. Please try again.",
-			);
+			const errorMsg = error.message || "Failed to refine page. Please try again.";
+			addServerMessage(`Error refining: ${errorMsg}`);
+			console.error("Refine page error:", error);
 		} finally {
 			isLoading = false;
 			scrollToBottom();
@@ -310,65 +236,80 @@
 		});
 	}
 
-	onMount(async () => {
-		if (!browser) return;
+	// Remove project, currentHtmlContent, userRequest state variables as they are covered by currentProject and generatedHtml
+	// let project = $state<Project | null>(null); // Covered by currentProject
+	// let currentHtmlContent = $state(""); // Covered by generatedHtml
+	// let userRequest = $state(""); // Covered by messageInput for chat
+	let errorMessage = $state(""); // Keep for API key errors or general page errors
+	let showApiKeyModal = $state(false);
 
-		try {
-			currentProject = await projectStorage.get(projectId);
-			if (!currentProject) {
-				addServerMessage(`Project with ID ${projectId} not found. Redirecting...`);
-				setTimeout(() => goto("/"), 2000);
-				return;
-			}
-			
-			const existingMessages = await chatEventStorage.getByProject(projectId);
-			messages = existingMessages;
-
-			// Restore generatedHtml from the last bot message if applicable
-			if (messages.length > 0) {
-				const lastMessage = messages[messages.length - 1];
-				if (lastMessage.type === 'bot' && (lastMessage as BotChatEvent).rawContent) {
-					const { html: extractedHtml } = extractAndCleanBotResponse((lastMessage as BotChatEvent).rawContent!);
-					if (extractedHtml) {
-						generatedHtml = extractedHtml;
-					}
-				}
-			}
-			
-			// Check for initial prompt from MainPageInput
-			const initialPromptKey = `initialPromptFor:${projectId}`;
-			const storedPrompt = localStorage.getItem(initialPromptKey);
-
-			if (storedPrompt) {
-				localStorage.removeItem(initialPromptKey); // Clean up
-				
-				if (messages.length === 0) { // Only send if no messages exist for this project yet
-					messageInput = storedPrompt;
-					// Add a small delay to ensure UI is ready before sending
-					setTimeout(() => {
-						handleSendMessage();
-					}, 100);
-				}
-			} else if (messages.length === 0) {
-				// If no stored prompt and no messages, show a generic welcome for an existing empty project
-				addServerMessage(
-					"Welcome to your project! Describe what you want to build, or use 'Refine' if you have existing HTML.",
-				);
-			}
-			
-			scrollToBottom();
-
-		} catch (error) {
-			console.error("Error loading project data:", error);
-			addServerMessage("Error loading project. Please try again or go back.");
+	async function checkApiKey() {
+		const storedKey = await settingsStorage.getSetting<string>(apiKeyStorageKey);
+		if (!storedKey) {
+			// Option 1: Redirect to API key page
+			// await goto('/ask-for-api-key');
+			// Option 2: Show a modal or message on this page
+			showApiKeyModal = true;
+			errorMessage = 'OpenRouter API Key is not set. Please configure it in settings.';
+			return false;
 		}
-		
-		// Cleanup for resize listeners
-		return () => {
-			document.removeEventListener("mousemove", handleResize);
-			document.removeEventListener("mouseup", stopResize);
-		};
+		showApiKeyModal = false;
+		errorMessage = '';
+		return true;
+	}
+
+	onMount(async () => {
+		if (!await checkApiKey()) {
+			// If API key is not present, we might want to disable input or guide user
+			// For now, it shows a modal and error message.
+		}
+
+		// Load chat history for the project
+		const loadedMessages = await chatEventStorage.getByProject(projectId);
+		messages = loadedMessages;
+		scrollToBottom();
+
+
+		if (projectId) {
+			const loadedProject = await projectStorage.get(projectId);
+			if (loadedProject) {
+				currentProject = loadedProject;
+				// Initialize generatedHtml from the project's stored content
+				// If there are bot messages with rawContent, the last one might be more up-to-date.
+				// For simplicity, using project.htmlContent first.
+				generatedHtml = loadedProject.htmlContent || "<!-- Start by typing a command to create your page. -->";
+				
+				// Find the latest bot message with raw HTML content to ensure UI consistency
+				const lastBotMessageWithHtml = messages
+					.slice()
+					.reverse()
+					.find(msg => msg.type === 'bot' && (msg as BotChatEvent).rawContent && (msg as BotChatEvent).rawContent.includes('<!DOCTYPE html>')) as BotChatEvent | undefined;
+
+				if (lastBotMessageWithHtml?.rawContent) {
+					generatedHtml = lastBotMessageWithHtml.rawContent;
+				}
+
+
+			} else {
+				errorMessage = 'Project not found.';
+				// Optionally redirect or handle. For now, user can still chat to create a new page if project ID was for a new one.
+				// Or, if project must exist:
+				// await goto('/'); 
+			}
+		}
+		// Ensure messages container scrolls to bottom after messages and project loaded
+		scrollToBottom();
 	});
+
+	// Remove handleRefineRequest as its functionality is covered by handleRefine via chat
+	/*
+	async function handleRefineRequest() {
+		// ... This function is no longer needed ...
+	}
+	*/
+
+	// Use generatedHtml for iframeSrcDoc directly
+	let iframeSrcDoc = $derived(generatedHtml);
 
 	function startBuilding() {
 		if (!messageInput.trim()) return;
@@ -398,7 +339,13 @@
 	<title>{currentProject ? currentProject.name : 'inja.online'}</title>
 </svelte:head>
 
-<div class="h-screen bg-dark-primary flex flex-col">
+<div class="flex flex-col h-screen bg-zinc-900 text-white">
+	{#if showApiKeyModal}
+		<div class="p-4 bg-red-700 text-center">
+			{errorMessage} <a href="/ask-for-api-key" class="underline hover:text-zinc-300">Set API Key</a>
+		</div>
+	{/if}
+
 	<!-- Header -->
 	<Header project={currentProject} />
 
@@ -417,15 +364,16 @@
 			<div
 				class="flex-1 bg-white m-6 border border-primary-accent rounded-md overflow-hidden"
 			>
-				{#if generatedHtml}
+				{#if generatedHtml && generatedHtml.trim() !== "<!-- Start by typing a command to create your page. -->" && generatedHtml.trim() !== ""}
 					<iframe
-						srcdoc={generatedHtml}
+						srcdoc={iframeSrcDoc}
 						class="w-full h-full border-0"
 						title="Generated HTML Preview"
+						sandbox="allow-scripts allow-same-origin"
 					></iframe>
 				{:else}
 					<div class="flex items-center justify-center h-full">
-						<span class="text-zinc-500">Start a conversation to generate content</span>
+						<span class="text-zinc-500">{ generatedHtml.includes("Start by typing") ? "Start by typing a command to create your page." : "No preview available. Generate content via chat."}</span>
 					</div>
 				{/if}
 			</div>
@@ -538,22 +486,22 @@
 						bind:value={messageInput}
 						onkeypress={handleKeyPress}
 						placeholder="Type your message or refinement instruction..."
-						disabled={isLoading}
+						disabled={isLoading || showApiKeyModal}
 						class="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-zinc-100 placeholder-zinc-400 resize-none focus:ring-2 focus:ring-zinc-600 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
 						rows="1"
 					></textarea>
 					<button
 						onclick={handleSendMessage}
-						disabled={!messageInput.trim() || isLoading}
+						disabled={!messageInput.trim() || isLoading || showApiKeyModal}
 						class="bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-100 px-6 py-2 rounded-lg font-medium transition-colors duration-200 disabled:cursor-not-allowed"
 					>
 						{isLoading ? "Sending..." : "Send"}
 					</button>
 					<button
 						onclick={handleRefine}
-						disabled={!messageInput.trim() || isLoading || !generatedHtml}
+						disabled={!messageInput.trim() || isLoading || !generatedHtml || generatedHtml.includes("Start by typing") || showApiKeyModal}
 						class="bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-100 px-6 py-2 rounded-lg font-medium transition-colors duration-200 disabled:cursor-not-allowed"
-						title={!generatedHtml ? "Generate some HTML first to enable refine" : "Refine existing HTML"}
+						title={(!generatedHtml || generatedHtml.includes("Start by typing")) ? "Generate some HTML first to enable refine" : "Refine existing HTML"}
 					>
 						Refine
 					</button>
@@ -562,3 +510,8 @@
 		</div>
 	</div>
 </div>
+
+<!-- 
+  Consider adding a modal component for API key input if `showApiKeyModal` is true,
+  or ensure the /ask-for-api-key route is functional for users to input their key.
+-->
