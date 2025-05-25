@@ -210,25 +210,37 @@
 
 		const userMessageContent = messageInput.trim();
 		messageInput = "";
-		isLoading = true;
 
 		await storeAndAddUserMessage(userMessageContent);
 		scrollToBottom();
 
+		isLoading = true;
 		const thinkingId = addThinkingMessage();
 		scrollToBottom();
 
 		try {
-			// Call client-side API for creating initial page
-			const newHtmlContent = await createInitialPage(userMessageContent);
+			let newHtmlContent: string;
 			
-			await storeAndReplaceThinkingWithBotMessage(thinkingId, newHtmlContent, false);
+			// Determine if we should create a new page or refine existing content
+			const hasExistingContent = generatedHtml && 
+				generatedHtml.trim() !== "<!-- Start by typing a command to create your page. -->" && 
+				generatedHtml.trim() !== "";
+
+			if (hasExistingContent) {
+				// If there's existing HTML content, refine it
+				newHtmlContent = await refinePage(generatedHtml, userMessageContent);
+				await storeAndReplaceThinkingWithBotMessage(thinkingId, newHtmlContent, true);
+			} else {
+				// If no existing content, create a new page
+				newHtmlContent = await createInitialPage(userMessageContent);
+				await storeAndReplaceThinkingWithBotMessage(thinkingId, newHtmlContent, false);
+			}
 
 		} catch (error: any) {
 			messages = messages.filter((msg) => msg.id !== thinkingId);
-			const errorMsg = error.message || "Failed to create page. Please try again.";
+			const errorMsg = error.message || "Failed to process request. Please try again.";
 			addServerMessage(`Error: ${errorMsg}`);
-			console.error("Create page error:", error);
+			console.error("API request error:", error);
 		} finally {
 			isLoading = false;
 			scrollToBottom();

@@ -39,8 +39,14 @@ STICKLY FOLLOW WHAT USER WANTS. if user asks for a website with a specific theme
 
 create website for :
 `;
-export const getInitialPrompt = getSystemPrompt;
-export const getRefinementPrompt = () => REFINE_SYSTEM_PROMPT;
+export const getInitialPrompt = (_: string) => getSystemPrompt();
+export const getRefinementPrompt = (originalHtml: string, userRequest: string) => `
+user request is : ${userRequest}
+
+original HTML is :
+${originalHtml}
+
+`;
 
 export const REFINE_SYSTEM_PROMPT = `
 You are an HTML refinement assistant. Your task is to modify an existing HTML structure based on user instructions.

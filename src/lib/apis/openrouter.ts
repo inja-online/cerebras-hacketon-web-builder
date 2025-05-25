@@ -1,5 +1,5 @@
 import { settingsStorage } from '$lib/storage';
-import { getSystemPrompt, getInitialPrompt, getRefinementPrompt } from './prompts';
+import { getSystemPrompt, getInitialPrompt, getRefinementPrompt, REFINE_SYSTEM_PROMPT } from './prompts';
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const API_KEY_STORAGE_KEY = 'openrouter_api_key';
@@ -94,7 +94,7 @@ export async function createInitialPage(userPrompt: string): Promise<string> {
 
 export async function refinePage(originalHtml: string, userRequest: string): Promise<string> {
   const messages: ChatMessage[] = [
-    { role: 'system', content: getSystemPrompt() },
+    { role: 'system', content: REFINE_SYSTEM_PROMPT },
     { role: 'user', content: getRefinementPrompt(originalHtml, userRequest) }
   ];
   const rawContent = await callOpenRouterApi(messages);
