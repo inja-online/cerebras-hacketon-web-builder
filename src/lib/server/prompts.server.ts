@@ -18,9 +18,19 @@ cdn :
 <script defer="" src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&amp;display=swap" rel="stylesheet">
-lucid icon as well
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucid-ui@latest/dist/lucid-ui.min.css">
 
+lucid icon example:
+<!DOCTYPE html>
+<body>
+  <i data-lucide="volume-2" class="my-class"></i>
+  <i data-lucide="x"></i>
+  <i data-lucide="menu"></i>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
 
 for images use :
 https://picsum.photos/
@@ -37,11 +47,23 @@ You MUST output ONLY the complete, modified HTML code. Do not include any explan
 The output must be a valid HTML document, starting with <!DOCTYPE html> and ending with </html>.
 Ensure all necessary CDN links for Tailwind CSS, Alpine.js, Inter font, and Lucid Icons are present in the <head> if not already there or if relevant to the refinement.
 
-CDN links to ensure are present if needed:
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+cdn :
+<script defer="" src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucid-ui@latest/dist/lucid-ui.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&amp;display=swap" rel="stylesheet">
+
+lucid icon example:
+<!DOCTYPE html>
+<body>
+  <i data-lucide="volume-2" class="my-class"></i>
+  <i data-lucide="x"></i>
+  <i data-lucide="menu"></i>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
 
 For images, if new ones are needed, use placeholders from: https://picsum.photos/
 
