@@ -1,16 +1,32 @@
 <script>
   import { goto } from '$app/navigation';
+  import { projectStorage } from '$lib/storage';
   
   let prompt = '';
   
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!prompt.trim()) return;
     
-    // Store prompt in localStorage
-    localStorage.setItem('currentPrompt', prompt.trim());
-    
-    // Navigate to /s/new
-    goto('/s/new');
+    try {
+      const projectName = `Project - ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
+      const projectDescription = prompt.trim();
+      
+      const newProjectId = await projectStorage.store({
+        name: projectName,
+        description: projectDescription,
+        isPrivate: false, // Default to public or make it configurable
+      });
+      
+      // Store initial prompt for the new project page to pick up
+      localStorage.setItem(`initialPromptFor:${newProjectId}`, prompt.trim());
+      
+      // Navigate to the new project's page
+      goto(`/s/${newProjectId}`);
+      
+    } catch (error) {
+      console.error("Failed to create new project:", error);
+      // Optionally, show an error message to the user
+    }
   }
 </script>
 

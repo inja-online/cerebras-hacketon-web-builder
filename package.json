@@ -30,6 +30,7 @@
 	},
 	"dependencies": {
 		"@lucide/svelte": "^0.511.0",
+		"dexie": "^4.0.11",
 		"highlight.js": "^11.11.1",
 		"mdsvex": "^0.12.6",
 		"mermaid": "^11.6.0",

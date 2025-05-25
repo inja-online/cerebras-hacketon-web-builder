@@ -3,4 +3,8 @@
     Component styling is consistent with the minimalist approach. Elements like textareas and buttons feature rounded corners, subtle borders, and soft transitions on hover or focus, providing gentle visual feedback. Spacing is generous, achieved through Tailwind's utility classes, which helps in creating a balanced and uncluttered layout. The overall design prioritizes a clean, unobtrusive user interface, allowing the content and user interaction to be the primary focus.
 
 
-    the project is svelte5 and sveltekit
+    the project is svelte5 and sveltekit.
+    the font is setted up in the root layout file do not add it everytime.
+
+    use src/lib/storage.ts for store and retrieve everything in the application, it uses Dexie and IndexedDB for storage.
+    use src/app.css 

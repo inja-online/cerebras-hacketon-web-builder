@@ -5,6 +5,7 @@ export interface BaseChatEvent {
   id: string;
   timestamp: Date;
   updatedAt?: Date;
+  projectId?: string; // Link events to projects
 }
 
 // User message event
@@ -18,7 +19,8 @@ export interface UserChatEvent extends BaseChatEvent {
 // Bot message event
 export interface BotChatEvent extends BaseChatEvent {
   type: 'bot';
-  content: string;
+  content: string; // This will be the display text
+  rawContent?: string; // The full raw response from the bot, potentially including HTML
   config?: {
     sources?: string[];
     requiresFeedback?: boolean;

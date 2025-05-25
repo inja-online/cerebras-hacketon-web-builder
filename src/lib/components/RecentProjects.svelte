@@ -1,33 +1,17 @@
 <script>
   import { goto } from '$app/navigation';
-    import { onMount } from 'svelte';
+  import { onMount } from 'svelte';
+  import { projectStorage, timeAgo } from '$lib/storage';
 
-  const mockProjects = [
-    {
-      id: 'a1b2c3',
-      title: 'E-commerce Dashboard',
-      time: '2 hours ago'
-    },
-    {
-      id: 'd4e5f6',
-      title: 'Portfolio Website',
-      time: '1 day ago'
-    },
-    {
-      id: 'g7h8i9',
-      title: 'Landing Page',
-      time: '3 days ago'
-    },
-    {
-      id: 'j0k1l2',
-      title: 'Blog Template',
-      time: '1 week ago'
-    }
-  ];
   let displayedProjects = $state([]);
 
-  onMount(()=>{
-    displayedProjects = mockProjects.slice(0, 5)
+  onMount(async () => {
+    try {
+      const projects = await projectStorage.getRecent(5);
+      displayedProjects = projects;
+    } catch (error) {
+      console.error('Failed to load recent projects:', error);
+    }
   });
 
   function handleProjectClick(projectId) {
@@ -38,9 +22,14 @@
     goto('/projects');
   }
 
-  function handleDelete(event, projectId) {
+  async function handleDelete(event, projectId) {
     event.stopPropagation();
-    displayedProjects = displayedProjects.filter(project => project.id !== projectId);
+    try {
+      await projectStorage.delete(projectId);
+      displayedProjects = displayedProjects.filter(project => project.id !== projectId);
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+    }
   }
 </script>
 
@@ -67,11 +56,11 @@
         >
           <div class="flex justify-between items-center">
             <h4 class="text-white font-medium group-hover:text-primary-accent transition-colors duration-200">
-              {project.title}
+              {project.name}
             </h4>
             <div class="flex items-center gap-3">
               <span class="text-text-muted text-sm">
-                {project.time}
+                {timeAgo(project.updatedAt)}
               </span>
                <button
                 class="opacity-0 group-hover:opacity-100 p-1 text-text-muted hover:text-red-400 transition-all duration-200 z-10"

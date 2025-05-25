@@ -8,10 +8,13 @@
 		BotChatEvent,
 		ThinkingChatEvent,
 		ServerChatEvent,
+		Project,
 	} from "$lib/types.js";
 	import Header from "$lib/components/Header.svelte";
 	import Footer from "$lib/components/Footer.svelte";
 	import { browser } from "$app/environment";
+	import { projectStorage, chatEventStorage } from "$lib/storage";
+	import { goto } from "$app/navigation";
 
 	// Original resizing state
 	let leftPanelWidth = $state(70);
@@ -25,8 +28,9 @@
 	let messagesContainer: HTMLElement | undefined = $state();
 	let generatedHtml = $state("");
 	let lastBotRawMessageContent: string | null = $state(null);
+	let currentProject: Project | null | undefined = $state(null);
 
-	const chatId = $page.params.id;
+	const projectId = $page.params.id; // This is the project ID
 	const userId = "user-1"; // This should come from authentication
 
 	// Original resizing functions
@@ -59,15 +63,22 @@
 		return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 	}
 
-	function addUserMessage(content: string, prefix: string = ""): void {
+	async function storeAndAddUserMessage(content: string, prefix: string = ""): Promise<void> {
 		const userMessage: UserChatEvent = {
 			id: generateId(),
 			type: "user",
 			userId,
 			content: prefix ? `${prefix}: ${content}` : content,
 			timestamp: new Date(),
+			projectId: projectId,
 		};
 		messages = [...messages, userMessage];
+		try {
+			await chatEventStorage.store(userMessage, projectId);
+		} catch (error) {
+			console.error("Failed to store user message:", error);
+			// Optionally, add a server message indicating storage failure
+		}
 	}
 
 	function addThinkingMessage(): string {
@@ -100,18 +111,20 @@
 		return { html: null, displayText: rawContent };
 	}
 
-	function replaceThinkingWithBotMessage(
+	async function storeAndReplaceThinkingWithBotMessage(
 		thinkingId: string,
 		rawBotContent: string,
-	): void {
+	): Promise<void> {
 		lastBotRawMessageContent = rawBotContent;
 		const { html: extractedHtml, displayText } = extractAndCleanBotResponse(rawBotContent);
 
 		const botMessage: BotChatEvent = {
-			id: generateId(),
+			id: generateId(), // Use a new ID for the bot message
 			type: "bot",
-			content: displayText, // Use cleaned display text
+			content: displayText,
+			rawContent: rawBotContent, // Store the raw content
 			timestamp: new Date(),
+			projectId: projectId,
 		};
 
 		if (extractedHtml) {
@@ -121,6 +134,15 @@
 		messages = messages.map((msg) =>
 			msg.id === thinkingId ? botMessage : msg,
 		);
+		
+		try {
+			// If the thinking message was temporary and not stored, store the new bot message.
+			// If thinking messages were stored, you might want to update it instead.
+			// For simplicity, we assume thinking messages are not stored, and bot messages are new entries.
+			await chatEventStorage.store(botMessage, projectId);
+		} catch (error) {
+			console.error("Failed to store bot message:", error);
+		}
 	}
 
 	function addServerMessage(content: string): void {
@@ -148,8 +170,8 @@
 		messageInput = "";
 		isLoading = true;
 
-		// Add user message
-		addUserMessage(userMessageContent);
+		// Add and store user message
+		await storeAndAddUserMessage(userMessageContent);
 		scrollToBottom();
 
 		// Add thinking indicator
@@ -157,42 +179,37 @@
 		scrollToBottom();
 
 		try {
-			// Build chat history from current messages
-			const chatHistory = messages
-				.filter(msg => msg.type === "user" || msg.type === "bot")
+			// Build chat history from current messages state (already includes the new user message)
+			const chatHistoryForAPI = messages
+				.filter(msg => (msg.type === "user" || msg.type === "bot") && msg.projectId === projectId)
 				.map(msg => ({
 					role: msg.type === "user" ? "user" : "assistant" as const,
-					content: msg.content
+					// Ensure content being sent is what the API expects (e.g., just text for 'user' role)
+					content: msg.type === 'user' ? (msg as UserChatEvent).content : (msg as BotChatEvent).content
 				}));
-
-			// Add the current user message to history
-			chatHistory.push({
-				role: "user",
-				content: userMessageContent
-			});
+			
+			// The latest user message is already in `messages` and thus in `chatHistoryForAPI`
 
 			const response = await fetch('/api/create', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ chatHistory })
+				body: JSON.stringify({ chatHistory: chatHistoryForAPI, projectId: projectId }) 
 			});
 
 			const result = await response.json();
 
 			if (result.success) {
-				// Use the extracted HTML content and raw content for display
-				const htmlContent = result.content; // Already extracted HTML
-				const rawContent = result.rawContent || result.content; // Full response for context
+				// result.rawContent contains the full response, result.content is the extracted HTML
+				const botRawResponse = result.rawContent || (typeof result.content === 'string' && result.content.includes('<!DOCTYPE html>') ? result.content : `Generated: ${result.content}`);
 				
-				// Update generatedHtml with the clean HTML
-				if (htmlContent && htmlContent.includes('<!DOCTYPE html>')) {
-					generatedHtml = htmlContent;
+				// Update generatedHtml with the clean HTML if available from result.content
+				if (result.content && typeof result.content === 'string' && result.content.includes('<!DOCTYPE html>')) {
+					generatedHtml = result.content;
 				}
 				
-				// Replace thinking with bot response using raw content for display
-				replaceThinkingWithBotMessage(thinkingId, rawContent);
+				await storeAndReplaceThinkingWithBotMessage(thinkingId, botRawResponse);
 			} else {
 				// Remove thinking and add error message
 				messages = messages.filter((msg) => msg.id !== thinkingId);
@@ -219,8 +236,8 @@
 		messageInput = ""; // Clear input after initiating refine
 		isLoading = true;
 
-		// Add user message for refinement
-		addUserMessage(refineInstruction, "Refine");
+		// Add and store user message for refinement
+		await storeAndAddUserMessage(refineInstruction, "Refine");
 		scrollToBottom();
 
 		// Add thinking indicator
@@ -235,26 +252,32 @@
 				},
 				body: JSON.stringify({ 
 					originalHtml: generatedHtml, 
-					userRequest: refineInstruction 
+					userRequest: refineInstruction,
+					projectId: projectId // Pass projectId if API needs it
 				})
 			});
 
 			const result = await response.json();
 
 			if (result.success && result.content) {
-				generatedHtml = result.content; // Update HTML preview with refined content
-				// Replace thinking with a success message for refinement
+				generatedHtml = result.content; // result.content is the refined HTML
+				
+				const botRefineMessage: BotChatEvent = {
+					id: generateId(),
+					type: "bot",
+					content: "Preview updated with refinements. What's next?",
+					rawContent: result.content, // Store the refined HTML as rawContent
+					timestamp: new Date(),
+					projectId: projectId,
+				};
+
 				messages = messages.map((msg) =>
 					msg.id === thinkingId
-						? ({
-								id: generateId(),
-								type: "bot",
-								content: "Preview updated with refinements. What's next?",
-								timestamp: new Date(),
-							} as BotChatEvent)
+						? botRefineMessage
 						: msg,
 				);
-				lastBotRawMessageContent = result.content; // Update last bot content with the new HTML
+				await chatEventStorage.store(botRefineMessage, projectId);
+				lastBotRawMessageContent = result.content; 
 			} else {
 				// Remove thinking and add error message
 				messages = messages.filter((msg) => msg.id !== thinkingId);
@@ -287,30 +310,59 @@
 		});
 	}
 
-	onMount(() => {
-		const id = $page.params.id;
-		
-		// Add welcome message first
-		addServerMessage(
-			"Welcome to the builder! Describe what you want to build, or use the 'Refine' button with instructions if you have existing HTML.",
-		);
-		scrollToBottom();
-		
-		if (id === 'new' && browser) {
-			// Read prompt from localStorage
-			const storedPrompt = localStorage.getItem('currentPrompt');
-			if (storedPrompt) {
-				// Clear the localStorage after reading
-				localStorage.removeItem('currentPrompt');
-				// Set the prompt as input and automatically send it
-				messageInput = storedPrompt;
-				// Start the chat workflow automatically
-				setTimeout(() => {
-					handleSendMessage();
-				}, 500); // Small delay to ensure UI is ready
-			}
-		}
+	onMount(async () => {
+		if (!browser) return;
 
+		try {
+			currentProject = await projectStorage.get(projectId);
+			if (!currentProject) {
+				addServerMessage(`Project with ID ${projectId} not found. Redirecting...`);
+				setTimeout(() => goto("/"), 2000);
+				return;
+			}
+			
+			const existingMessages = await chatEventStorage.getByProject(projectId);
+			messages = existingMessages;
+
+			// Restore generatedHtml from the last bot message if applicable
+			if (messages.length > 0) {
+				const lastMessage = messages[messages.length - 1];
+				if (lastMessage.type === 'bot' && (lastMessage as BotChatEvent).rawContent) {
+					const { html: extractedHtml } = extractAndCleanBotResponse((lastMessage as BotChatEvent).rawContent!);
+					if (extractedHtml) {
+						generatedHtml = extractedHtml;
+					}
+				}
+			}
+			
+			// Check for initial prompt from MainPageInput
+			const initialPromptKey = `initialPromptFor:${projectId}`;
+			const storedPrompt = localStorage.getItem(initialPromptKey);
+
+			if (storedPrompt) {
+				localStorage.removeItem(initialPromptKey); // Clean up
+				
+				if (messages.length === 0) { // Only send if no messages exist for this project yet
+					messageInput = storedPrompt;
+					// Add a small delay to ensure UI is ready before sending
+					setTimeout(() => {
+						handleSendMessage();
+					}, 100);
+				}
+			} else if (messages.length === 0) {
+				// If no stored prompt and no messages, show a generic welcome for an existing empty project
+				addServerMessage(
+					"Welcome to your project! Describe what you want to build, or use 'Refine' if you have existing HTML.",
+				);
+			}
+			
+			scrollToBottom();
+
+		} catch (error) {
+			console.error("Error loading project data:", error);
+			addServerMessage("Error loading project. Please try again or go back.");
+		}
+		
 		// Cleanup for resize listeners
 		return () => {
 			document.removeEventListener("mousemove", handleResize);
@@ -343,12 +395,12 @@
 </script>
 
 <svelte:head>
-	<title>inja.online</title>
+	<title>{currentProject ? currentProject.name : 'inja.online'}</title>
 </svelte:head>
 
 <div class="h-screen bg-dark-primary flex flex-col">
 	<!-- Header -->
-	<Header />
+	<Header project={currentProject} />
 
 	<!-- Main Content Layout -->
 	<div class="flex flex-1 overflow-hidden" bind:this={containerRef}>
@@ -400,7 +452,7 @@
 			<!-- Header -->
 			<header class="border-b border-zinc-800 p-4">
 				<h1 class="text-xl font-semibold text-zinc-100">
-					Chat {chatId}
+					{currentProject ? currentProject.name : `Chat ${projectId}`}
 				</h1>
 			</header>
 
