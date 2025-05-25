@@ -73,6 +73,7 @@
 			content: prefix ? `${prefix}: ${content}` : content,
 			timestamp: new Date(),
 			projectId: projectId,
+			isSent: true, // Mark as sent since it will be processed immediately
 		};
 		messages = [...messages, userMessage];
 		try {
@@ -93,16 +94,52 @@
 		return thinkingMessage.id;
 	}
 
-	function extractAndCleanBotResponse(rawContent: string): { html: string | null; displayText: string } {
-		// Assuming rawContent from createInitialPage and refinePage is already clean HTML
-		// If it might contain other text, this function might need to be more robust
-		// For now, assume it's primarily HTML.
-		const isHtml = rawContent.toLowerCase().includes('<!doctype html>') || rawContent.toLowerCase().includes('<html');
-		if (isHtml) {
-			return { html: rawContent, displayText: "Preview updated. What's next?" };
+	function extractAndCleanBotResponse(rawContent: string): { 
+		html: string | null; 
+		displayText: string; 
+		originalMessage: string 
+	} {
+		const originalMessage = rawContent;
+		
+		// Look for HTML document structure
+		const htmlStartRegex = /<!doctype\s+html[^>]*>|<html[^>]*>/i;
+		const htmlEndRegex = /<\/html\s*>/i;
+		
+		const htmlStartMatch = rawContent.match(htmlStartRegex);
+		const htmlEndMatch = rawContent.match(htmlEndRegex);
+		
+		if (htmlStartMatch && htmlEndMatch) {
+			const htmlStartIndex = htmlStartMatch.index!;
+			const htmlEndIndex = htmlEndMatch.index! + htmlEndMatch[0].length;
+			
+			// Extract the HTML content
+			const htmlContent = rawContent.substring(htmlStartIndex, htmlEndIndex);
+			
+			// Extract the text before and after HTML
+			const beforeHtml = rawContent.substring(0, htmlStartIndex).trim();
+			const afterHtml = rawContent.substring(htmlEndIndex).trim();
+			
+			// Combine non-HTML parts as display message
+			let displayText = [beforeHtml, afterHtml].filter(text => text.length > 0).join('\n\n');
+			
+			// If no display text, provide a default message
+			if (!displayText) {
+				displayText = "Preview updated. What's next?";
+			}
+			
+			return { 
+				html: htmlContent, 
+				displayText, 
+				originalMessage 
+			};
 		}
-		// If not clearly HTML, treat as plain text response
-		return { html: null, displayText: rawContent };
+		
+		// If no HTML found, treat entire content as display text
+		return { 
+			html: null, 
+			displayText: rawContent, 
+			originalMessage 
+		};
 	}
 
 	async function storeAndReplaceThinkingWithBotMessage(
@@ -111,21 +148,28 @@
 		isRefinement: boolean = false,
 	): Promise<void> {
 		lastBotRawMessageContent = rawBotContent;
-		// Use a simpler display text since the rawBotContent is now expected to be mostly HTML
-		const displayText = isRefinement ? "Preview refined. Any further instructions?" : "Page created/updated. What's next?";
+		
+		// Parse the bot response to separate HTML and display message
+		const { html, displayText, originalMessage } = extractAndCleanBotResponse(rawBotContent);
+		
+		// Use the extracted display text or provide a default
+		const finalDisplayText = displayText || (isRefinement ? "Preview refined. Any further instructions?" : "Page created/updated. What's next?");
 
 		const botMessage: BotChatEvent = {
 			id: generateId(), 
 			type: "bot",
-			content: displayText,
-			rawContent: rawBotContent, 
+			content: finalDisplayText,
+			rawContent: rawBotContent,
+			htmlContent: html || undefined,
+			originalMessage,
 			timestamp: new Date(),
 			projectId: projectId,
 		};
 
-		// The rawBotContent itself is the HTML for createInitialPage and refinePage
-		generatedHtml = rawBotContent;
-
+		// Update the preview with HTML content if available
+		if (html) {
+			generatedHtml = html;
+		}
 
 		messages = messages.map((msg) =>
 			msg.id === thinkingId ? botMessage : msg,
@@ -133,8 +177,8 @@
 		
 		try {
 			await chatEventStorage.store(botMessage, projectId);
-			if (currentProject?.id) {
-				await projectStorage.update(currentProject.id, { htmlContent: generatedHtml });
+			if (currentProject?.id && html) {
+				await projectStorage.update(currentProject.id, { htmlContent: html });
 			}
 		} catch (error) {
 			console.error("Failed to store bot message or update project:", error);
@@ -258,46 +302,87 @@
 		return true;
 	}
 
+	async function triggerInitialPageGeneration(initialPromptContent: string) {
+		if (isLoading) return; // Prevent multiple triggers
+		isLoading = true;
+		const thinkingId = addThinkingMessage();
+		scrollToBottom();
+
+		try {
+			addServerMessage("Auto-generating initial page based on your prompt...");
+			scrollToBottom();
+			const newHtmlContent = await createInitialPage(initialPromptContent);
+			await storeAndReplaceThinkingWithBotMessage(thinkingId, newHtmlContent, false);
+		} catch (error: any) {
+			messages = messages.filter((msg) => msg.id !== thinkingId); // Remove thinking message on error
+			const errorMsg = error.message || "Failed to auto-generate initial page. Please try again.";
+			addServerMessage(`Error: ${errorMsg}`);
+			console.error("Auto-generate initial page error:", error);
+		} finally {
+			isLoading = false;
+			scrollToBottom();
+		}
+	}
+
+	async function markUserMessageAsSent(messageId: string): Promise<void> {
+		try {
+			await chatEventStorage.update(messageId, { isSent: true });
+			// Update local messages array
+			messages = messages.map(msg => 
+				msg.id === messageId && msg.type === 'user' 
+					? { ...msg, isSent: true } 
+					: msg
+			);
+		} catch (error) {
+			console.error("Failed to mark message as sent:", error);
+		}
+	}
+
 	onMount(async () => {
 		if (!await checkApiKey()) {
-			// If API key is not present, we might want to disable input or guide user
-			// For now, it shows a modal and error message.
+			// API key not present, modal shown by checkApiKey
 		}
 
+		const loadedProject = await projectStorage.get(projectId);
+		if (loadedProject) {
+			currentProject = loadedProject;
+			generatedHtml = loadedProject.htmlContent || "<!-- Start by typing a command to create your page. -->";
+		} else {
+			errorMessage = 'Project not found. You can start a new one by typing a description.';
+			// Potentially redirect or allow creation if it's a truly new ID not yet in DB
+			// For now, we assume MainPageInput creates the project entry first.
+		}
+		
 		// Load chat history for the project
 		const loadedMessages = await chatEventStorage.getByProject(projectId);
 		messages = loadedMessages;
-		scrollToBottom();
+		
 
+		// Check for unsent user messages and process them
+		const unsentUserMessages = messages.filter(msg => 
+			msg.type === 'user' && !(msg as UserChatEvent).isSent
+		) as UserChatEvent[];
 
-		if (projectId) {
-			const loadedProject = await projectStorage.get(projectId);
-			if (loadedProject) {
-				currentProject = loadedProject;
-				// Initialize generatedHtml from the project's stored content
-				// If there are bot messages with rawContent, the last one might be more up-to-date.
-				// For simplicity, using project.htmlContent first.
-				generatedHtml = loadedProject.htmlContent || "<!-- Start by typing a command to create your page. -->";
-				
-				// Find the latest bot message with raw HTML content to ensure UI consistency
-				const lastBotMessageWithHtml = messages
-					.slice()
-					.reverse()
-					.find(msg => msg.type === 'bot' && (msg as BotChatEvent).rawContent && (msg as BotChatEvent).rawContent.includes('<!DOCTYPE html>')) as BotChatEvent | undefined;
+		if (unsentUserMessages.length > 0 && await checkApiKey()) {
+			// Process the first unsent message (usually the initial prompt)
+			const firstUnsentMessage = unsentUserMessages[0];
+			await markUserMessageAsSent(firstUnsentMessage.id);
+			await triggerInitialPageGeneration(firstUnsentMessage.content);
+		} else if (currentProject?.htmlContent && currentProject.htmlContent !== "<!-- Start by typing a command to create your page. -->") {
+			// If there's existing HTML content in the project, ensure the preview reflects it,
+			// especially if chat history might have a more recent bot message with HTML.
+			const lastBotMessageWithHtml = messages
+				.slice()
+				.reverse()
+				.find(msg => msg.type === 'bot' && (msg as BotChatEvent).htmlContent) as BotChatEvent | undefined;
 
-				if (lastBotMessageWithHtml?.rawContent) {
-					generatedHtml = lastBotMessageWithHtml.rawContent;
-				}
-
-
+			if (lastBotMessageWithHtml?.htmlContent) {
+				generatedHtml = lastBotMessageWithHtml.htmlContent;
 			} else {
-				errorMessage = 'Project not found.';
-				// Optionally redirect or handle. For now, user can still chat to create a new page if project ID was for a new one.
-				// Or, if project must exist:
-				// await goto('/'); 
+				generatedHtml = currentProject.htmlContent;
 			}
 		}
-		// Ensure messages container scrolls to bottom after messages and project loaded
+		
 		scrollToBottom();
 	});
 

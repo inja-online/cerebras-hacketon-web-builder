@@ -14,13 +14,16 @@ export interface UserChatEvent extends BaseChatEvent {
   userId: string;
   avatar?: string;
   content: string;
+  isSent?: boolean; // Track if message has been sent to server for processing
 }
 
 // Bot message event
 export interface BotChatEvent extends BaseChatEvent {
   type: 'bot';
   content: string; // This will be the display text
-  rawContent?: string; // The full raw response from the bot, potentially including HTML
+  rawContent?: string; // The full raw response from the bot
+  htmlContent?: string; // Extracted HTML content for iframe
+  originalMessage?: string; // Original response before parsing
   config?: {
     sources?: string[];
     requiresFeedback?: boolean;

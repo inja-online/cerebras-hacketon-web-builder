@@ -1,8 +1,14 @@
-<script>
+<script lang="ts">
   import { goto } from '$app/navigation';
-  import { projectStorage } from '$lib/storage';
+  import { projectStorage, chatEventStorage } from '$lib/storage';
+  import type { UserChatEvent } from '$lib/types';
   
   let prompt = '';
+  const userId = "user-1"; // Consistent with project page
+
+  function generateId(): string {
+		return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+	}
   
   async function handleSubmit() {
     if (!prompt.trim()) return;
@@ -14,11 +20,21 @@
       const newProjectId = await projectStorage.store({
         name: projectName,
         description: projectDescription,
-        isPrivate: false, // Default to public or make it configurable
+        htmlContent: "<!-- Start by typing a command to create your page. -->", // Initialize htmlContent
+        isPrivate: false, 
       });
-      
-      // Store initial prompt for the new project page to pick up
-      localStorage.setItem(`initialPromptFor:${newProjectId}`, prompt.trim());
+
+      // Create and store the initial user message as a chat event
+      const initialUserMessage: UserChatEvent = {
+        id: generateId(),
+        type: 'user',
+        userId,
+        content: projectDescription, // Use the same prompt content
+        timestamp: new Date(),
+        projectId: newProjectId,
+        isSent: false, // Mark as not sent so it gets processed on page load
+      };
+      await chatEventStorage.store(initialUserMessage, newProjectId);
       
       // Navigate to the new project's page
       goto(`/s/${newProjectId}`);
