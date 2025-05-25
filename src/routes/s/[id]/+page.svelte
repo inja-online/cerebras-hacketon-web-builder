@@ -2,7 +2,6 @@
 	import { GripVertical } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { page } from "$app/stores";
-	import { sendChatMessage } from "$lib/api.js";
 	import type {
 		ChatEvent,
 		UserChatEvent,
@@ -59,12 +58,12 @@
 		return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 	}
 
-	function addUserMessage(content: string): void {
+	function addUserMessage(content: string, prefix: string = ""): void {
 		const userMessage: UserChatEvent = {
 			id: generateId(),
 			type: "user",
 			userId,
-			content,
+			content: prefix ? `${prefix}: ${content}` : content,
 			timestamp: new Date(),
 		};
 		messages = [...messages, userMessage];
@@ -157,18 +156,47 @@
 		scrollToBottom();
 
 		try {
-			// Send message to API, now including lastBotRawMessageContent as context
-			// Note: sendChatMessage in $lib/api.js needs to be updated to accept a third argument for context
-			const response = await sendChatMessage(userMessageContent, chatId, lastBotRawMessageContent);
+			// Build chat history from current messages
+			const chatHistory = messages
+				.filter(msg => msg.type === "user" || msg.type === "bot")
+				.map(msg => ({
+					role: msg.type === "user" ? "user" : "assistant" as const,
+					content: msg.content
+				}));
 
-			if (response.success) {
-				// Replace thinking with bot response
-				replaceThinkingWithBotMessage(thinkingId, response.content);
+			// Add the current user message to history
+			chatHistory.push({
+				role: "user",
+				content: userMessageContent
+			});
+
+			const response = await fetch('/api/create', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ chatHistory })
+			});
+
+			const result = await response.json();
+
+			if (result.success) {
+				// Use the extracted HTML content and raw content for display
+				const htmlContent = result.content; // Already extracted HTML
+				const rawContent = result.rawContent || result.content; // Full response for context
+				
+				// Update generatedHtml with the clean HTML
+				if (htmlContent && htmlContent.includes('<!DOCTYPE html>')) {
+					generatedHtml = htmlContent;
+				}
+				
+				// Replace thinking with bot response using raw content for display
+				replaceThinkingWithBotMessage(thinkingId, rawContent);
 			} else {
 				// Remove thinking and add error message
 				messages = messages.filter((msg) => msg.id !== thinkingId);
 				addServerMessage(
-					`Error: ${response.error || "Failed to get response"}`,
+					`Error: ${result.error || "Failed to get response"}`,
 				);
 			}
 		} catch (error) {
@@ -176,6 +204,67 @@
 			messages = messages.filter((msg) => msg.id !== thinkingId);
 			addServerMessage(
 				"Error: Failed to send message. Please try again.",
+			);
+		} finally {
+			isLoading = false;
+			scrollToBottom();
+		}
+	}
+
+	async function handleRefine(): Promise<void> {
+		if (!messageInput.trim() || isLoading || !generatedHtml) return;
+
+		const refineInstruction = messageInput.trim();
+		messageInput = ""; // Clear input after initiating refine
+		isLoading = true;
+
+		// Add user message for refinement
+		addUserMessage(refineInstruction, "Refine");
+		scrollToBottom();
+
+		// Add thinking indicator
+		const thinkingId = addThinkingMessage();
+		scrollToBottom();
+
+		try {
+			const response = await fetch('/api/refine', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ 
+					originalHtml: generatedHtml, 
+					userRequest: refineInstruction 
+				})
+			});
+
+			const result = await response.json();
+
+			if (result.success && result.content) {
+				generatedHtml = result.content; // Update HTML preview with refined content
+				// Replace thinking with a success message for refinement
+				messages = messages.map((msg) =>
+					msg.id === thinkingId
+						? ({
+								id: generateId(),
+								type: "bot",
+								content: "Preview updated with refinements. What's next?",
+								timestamp: new Date(),
+							} as BotChatEvent)
+						: msg,
+				);
+				lastBotRawMessageContent = result.content; // Update last bot content with the new HTML
+			} else {
+				// Remove thinking and add error message
+				messages = messages.filter((msg) => msg.id !== thinkingId);
+				addServerMessage(
+					`Error refining: ${result.error || "Failed to get refined HTML"}`,
+				);
+			}
+		} catch (error) {
+			messages = messages.filter((msg) => msg.id !== thinkingId);
+			addServerMessage(
+				"Error: Failed to send refine request. Please try again.",
 			);
 		} finally {
 			isLoading = false;
@@ -199,7 +288,9 @@
 
 	onMount(() => {
 		// Add welcome message
-		addServerMessage("Welcome to the builder, let's start building your project! let us know what you want to build, and we will generate the HTML for you.");
+		addServerMessage(
+			"Welcome to the builder! Describe what you want to build, or use the 'Refine' button with instructions if you have existing HTML.",
+		);
 		scrollToBottom();
 
 		// Cleanup for resize listeners
@@ -353,7 +444,7 @@
 					<textarea
 						bind:value={messageInput}
 						onkeypress={handleKeyPress}
-						placeholder="Type your message..."
+						placeholder="Type your message or refinement instruction..."
 						disabled={isLoading}
 						class="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-zinc-100 placeholder-zinc-400 resize-none focus:ring-2 focus:ring-zinc-600 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
 						rows="1"
@@ -364,6 +455,14 @@
 						class="bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-100 px-6 py-2 rounded-lg font-medium transition-colors duration-200 disabled:cursor-not-allowed"
 					>
 						{isLoading ? "Sending..." : "Send"}
+					</button>
+					<button
+						onclick={handleRefine}
+						disabled={!messageInput.trim() || isLoading || !generatedHtml}
+						class="bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-100 px-6 py-2 rounded-lg font-medium transition-colors duration-200 disabled:cursor-not-allowed"
+						title={!generatedHtml ? "Generate some HTML first to enable refine" : "Refine existing HTML"}
+					>
+						Refine
 					</button>
 				</div>
 			</div>
