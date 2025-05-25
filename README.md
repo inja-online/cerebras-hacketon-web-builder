@@ -4,7 +4,7 @@ A minimalist, AI-powered web development platform that transforms natural langua
 
 ## 🌟 Overview
 
-INJA.ONLINE is an innovative web builder that leverages artificial intelligence to generate complete, responsive HTML websites from simple text descriptions. Users can describe their vision in plain English, and the AI will create a fully functional website using modern web technologies like Alpine.js, Tailwind CSS, and Lucide Icons.
+BUILDER.INJA.ONLINE is an innovative web builder that leverages artificial intelligence to generate complete, responsive HTML websites from simple text descriptions. Users can describe their vision in plain English, and the AI will create a fully functional website using modern web technologies like Alpine.js, Tailwind CSS, and Lucide Icons.
 
 ### Key Features
 
@@ -218,6 +218,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 🔗 Links
 
-- **Live Demo**: [INJA.ONLINE](https://inja.online)
+- **Live Demo**: [INJA.ONLINE](https://builder.inja.online)
 - **Cerebras API**: Learn more about the AI provider powering this platform
 - **SvelteKit**: The full-stack framework used for development
