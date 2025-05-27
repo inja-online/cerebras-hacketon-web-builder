@@ -1,5 +1,12 @@
 <script lang="ts">
-    import { GripVertical, Settings, Download } from "@lucide/svelte";
+    import {
+        GripVertical,
+        Settings,
+        Download,
+        Monitor,
+        Tablet,
+        Smartphone,
+    } from "@lucide/svelte";
     import { onMount } from "svelte";
     import { page } from "$app/stores";
     import {
@@ -40,6 +47,7 @@
     ); // Initialize with a placeholder
     let lastBotRawMessageContent: string | null = $state(null);
     let currentProject: Project | undefined = $state(undefined);
+    let iframeSizeMode = $state<"desktop" | "tablet" | "mobile">("desktop");
 
     const projectId = $page.params.id;
     const userId = "user-1";
@@ -499,6 +507,18 @@
 
         scrollToBottom();
     });
+
+    const setIframeSize = (size: "desktop" | "tablet" | "mobile") => {
+        iframeSizeMode = size;
+    };
+
+    const iframeContainerClasses = $derived(() => {
+        if (iframeSizeMode === "tablet")
+            return "w-[768px] mx-auto transition-all duration-300 ease-in-out";
+        if (iframeSizeMode === "mobile")
+            return "w-[375px] mx-auto transition-all duration-300 ease-in-out";
+        return "w-full transition-all duration-300 ease-in-out"; // desktop or default
+    });
 </script>
 
 <svelte:head>
@@ -529,40 +549,79 @@
                 class="p-2 px-4 border-b border-primary-accent flex justify-between items-center"
             >
                 <span class="text-white font-medium">Preview</span>
-                <button
-                    onclick={handleDownloadHtml}
-                    disabled={!generatedHtml ||
-                        generatedHtml.includes("Start by typing")}
-                    class="text-zinc-400 hover:text-white disabled:text-zinc-600 disabled:cursor-not-allowed transition-colors duration-200"
-                    title={!generatedHtml ||
-                    generatedHtml.includes("Start by typing")
-                        ? "Generate content to enable download"
-                        : "Download HTML"}
-                >
-                    <Download size={20} />
-                </button>
+                <div class="flex items-center space-x-1.5">
+                    <button
+                        onclick={() => setIframeSize("desktop")}
+                        class={"p-1.5 rounded-md transition-colors duration-200 " +
+                            (iframeSizeMode === "desktop"
+                                ? "bg-zinc-700 text-white"
+                                : "text-zinc-400 hover:bg-zinc-700 hover:text-white")}
+                        title="Desktop view (Full width)"
+                    >
+                        <Monitor size={18} />
+                    </button>
+                    <button
+                        onclick={() => setIframeSize("tablet")}
+                        class={"p-1.5 rounded-md transition-colors duration-200 " +
+                            (iframeSizeMode === "tablet"
+                                ? "bg-zinc-700 text-white"
+                                : "text-zinc-400 hover:bg-zinc-700 hover:text-white")}
+                        title="Tablet view (768px)"
+                    >
+                        <Tablet size={18} />
+                    </button>
+                    <button
+                        onclick={() => setIframeSize("mobile")}
+                        class={"p-1.5 rounded-md transition-colors duration-200 " +
+                            (iframeSizeMode === "mobile"
+                                ? "bg-zinc-700 text-white"
+                                : "text-zinc-400 hover:bg-zinc-700 hover:text-white")}
+                        title="Mobile view (375px)"
+                    >
+                        <Smartphone size={18} />
+                    </button>
+                    <div class="h-5 border-l border-zinc-700 mx-1"></div>
+                    <button
+                        onclick={handleDownloadHtml}
+                        disabled={!generatedHtml ||
+                            generatedHtml.includes("Start by typing")}
+                        class="text-zinc-400 hover:text-white disabled:text-zinc-600 disabled:cursor-not-allowed transition-colors duration-200 p-1.5 rounded-md"
+                        title={!generatedHtml ||
+                        generatedHtml.includes("Start by typing")
+                            ? "Generate content to enable download"
+                            : "Download HTML"}
+                    >
+                        <Download size={18} />
+                    </button>
+                </div>
             </div>
 
             <!-- Iframe Container -->
             <div
-                class="flex-1 bg-white m-4 border border-primary-accent rounded-md overflow-hidden"
+                class="flex-1 bg-zinc-800 m-4 border border-primary-accent rounded-md overflow-hidden p-1"
             >
-                {#if generatedHtml && generatedHtml.trim() !== "<!-- Start by typing a command to create your page. -->" && generatedHtml.trim() !== ""}
-                    <iframe
-                        srcdoc={iframeSrcDoc}
-                        class="w-full h-full border-0"
-                        title="Generated HTML Preview"
-                        sandbox="allow-scripts allow-same-origin"
-                    ></iframe>
-                {:else}
-                    <div class="flex items-center justify-center h-full">
-                        <span class="text-zinc-500"
-                            >{generatedHtml.includes("Start by typing")
-                                ? "Start by typing a command to create your page."
-                                : "No preview available. Generate content via chat."}</span
+                <div
+                    class="{iframeContainerClasses} h-full bg-white rounded-sm overflow-hidden shadow-xl"
+                >
+                    {#if generatedHtml && generatedHtml.trim() !== "<!-- Start by typing a command to create your page. -->" && generatedHtml.trim() !== ""}
+                        <iframe
+                            srcdoc={iframeSrcDoc}
+                            class="w-full h-full border-0"
+                            title="Generated HTML Preview"
+                            sandbox="allow-scripts allow-same-origin"
+                        ></iframe>
+                    {:else}
+                        <div
+                            class="flex items-center justify-center h-full bg-white"
                         >
-                    </div>
-                {/if}
+                            <span class="text-zinc-500"
+                                >{generatedHtml.includes("Start by typing")
+                                    ? "Start by typing a command to create your page."
+                                    : "No preview available. Generate content via chat."}</span
+                            >
+                        </div>
+                    {/if}
+                </div>
             </div>
 
             <!-- Attribution -->
