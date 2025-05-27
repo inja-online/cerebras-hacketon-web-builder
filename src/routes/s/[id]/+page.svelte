@@ -680,7 +680,62 @@
 
 <style>
     .chat-section {
-        height: calc(100vh - 185px);
+        flex-grow: 1;
+        overflow-y: auto;
+    }
+
+    .iframe-preview-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
         overflow: auto;
+    }
+
+    .iframe-content,
+    .placeholder-content {
+        background-color: white;
+        box-shadow:
+            0 4px 6px -1px rgb(0 0 0 / 0.1),
+            0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-lg */
+        border: none; /* iframe default border */
+        transition:
+            width 0.3s ease-in-out,
+            height 0.3s ease-in-out;
+        border-radius: 0.5rem; /* rounded-lg */
+    }
+
+    .iframe-preview-wrapper[data-size-mode="desktop"] .iframe-content,
+    .iframe-preview-wrapper[data-size-mode="desktop"] .placeholder-content {
+        width: 100%;
+        height: 100%;
+    }
+
+    .iframe-preview-wrapper[data-size-mode="tablet"] .iframe-content,
+    .iframe-preview-wrapper[data-size-mode="tablet"] .placeholder-content {
+        width: 768px; /* max-w-2xl */
+        height: 1024px; /* max-h-[1024px] */
+        max-width: 100%;
+        max-height: 100%;
+    }
+
+    .iframe-preview-wrapper[data-size-mode="mobile"] .iframe-content,
+    .iframe-preview-wrapper[data-size-mode="mobile"] .placeholder-content {
+        width: 384px; /* max-w-sm */
+        height: 844px; /* max-h-[844px] */
+        max-width: 100%;
+        max-height: 100%;
+    }
+
+    /* For placeholder specific styling beyond size/bg/shadow */
+    .placeholder-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 2.5rem; /* p-10 */
+        color: initial; /* Reset color if needed from parent text-zinc-500 */
     }
 </style>
