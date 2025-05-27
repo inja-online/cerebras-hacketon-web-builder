@@ -7,7 +7,7 @@
     }>();
 </script>
 
-<div class="flex-1 bg-dark-primary m-6 mb-4 border border-primary-accent rounded-md p-4 overflow-y-auto">
+<div class="flex-1 bg-dark-primary  p-4 overflow-y-auto">
     <div class="space-y-4">
         {#each events as event (event.id)}
             {#if event.type === 'thinking'}
