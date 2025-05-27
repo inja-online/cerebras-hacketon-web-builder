@@ -1,6 +1,9 @@
 import Dexie, { type Table } from 'dexie';
 import type { ChatEvent, Project } from './types';
 
+export const apiKeyStorageKey = "openrouter_api_key";
+
+
 // Setting interface
 export interface Setting {
   key: string; // Primary key

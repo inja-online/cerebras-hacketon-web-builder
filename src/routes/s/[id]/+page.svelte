@@ -2,8 +2,12 @@
 	import { GripVertical, Settings, Download } from "@lucide/svelte";
 	import { onMount } from "svelte";
 	import { page } from "$app/stores";
-	import { projectStorage, chatEventStorage, settingsStorage } from "$lib/storage";
-	import { goto } from "$app/navigation";
+	import {
+		projectStorage,
+		chatEventStorage,
+		settingsStorage,
+		apiKeyStorageKey,
+	} from "$lib/storage";
 	import type {
 		ChatEvent,
 		UserChatEvent,
@@ -14,10 +18,8 @@
 	} from "$lib/types.js";
 	import Header from "$lib/components/Header.svelte";
 	import Footer from "$lib/components/Footer.svelte";
-	import { createInitialPage, refinePage } from "$lib/apis/openrouter"; // Import the new client-side functions
-
-	const apiKeyStorageKey = 'openrouter_api_key';
-
+	import { createInitialPage, refinePage } from "$lib/apis/openrouter";
+	
 	// Original resizing state
 	let leftPanelWidth = $state(70);
 	let isResizing = $state(false);
@@ -28,12 +30,14 @@
 	let messageInput = $state("");
 	let isLoading = $state(false);
 	let messagesContainer: HTMLElement | undefined = $state();
-	let generatedHtml = $state("<!-- Start by typing a command to create your page. -->"); // Initialize with a placeholder
+	let generatedHtml = $state(
+		"<!-- Start by typing a command to create your page. -->",
+	); // Initialize with a placeholder
 	let lastBotRawMessageContent: string | null = $state(null);
 	let currentProject: Project | null | undefined = $state(null);
 
-	const projectId = $page.params.id; 
-	const userId = "user-1"; 
+	const projectId = $page.params.id;
+	const userId = "user-1";
 
 	// Original resizing functions
 	function startResize(e) {
@@ -65,7 +69,10 @@
 		return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 	}
 
-	async function storeAndAddUserMessage(content: string, prefix: string = ""): Promise<void> {
+	async function storeAndAddUserMessage(
+		content: string,
+		prefix: string = "",
+	): Promise<void> {
 		const userMessage: UserChatEvent = {
 			id: generateId(),
 			type: "user",
@@ -94,51 +101,56 @@
 		return thinkingMessage.id;
 	}
 
-	function extractAndCleanBotResponse(rawContent: string): { 
-		html: string | null; 
-		displayText: string; 
-		originalMessage: string 
+	function extractAndCleanBotResponse(rawContent: string): {
+		html: string | null;
+		displayText: string;
+		originalMessage: string;
 	} {
 		const originalMessage = rawContent;
-		
+
 		// Look for HTML document structure
 		const htmlStartRegex = /<!doctype\s+html[^>]*>|<html[^>]*>/i;
 		const htmlEndRegex = /<\/html\s*>/i;
-		
+
 		const htmlStartMatch = rawContent.match(htmlStartRegex);
 		const htmlEndMatch = rawContent.match(htmlEndRegex);
-		
+
 		if (htmlStartMatch && htmlEndMatch) {
 			const htmlStartIndex = htmlStartMatch.index!;
 			const htmlEndIndex = htmlEndMatch.index! + htmlEndMatch[0].length;
-			
+
 			// Extract the HTML content
-			const htmlContent = rawContent.substring(htmlStartIndex, htmlEndIndex);
-			
+			const htmlContent = rawContent.substring(
+				htmlStartIndex,
+				htmlEndIndex,
+			);
+
 			// Extract the text before and after HTML
 			const beforeHtml = rawContent.substring(0, htmlStartIndex).trim();
 			const afterHtml = rawContent.substring(htmlEndIndex).trim();
-			
+
 			// Combine non-HTML parts as display message
-			let displayText = [beforeHtml, afterHtml].filter(text => text.length > 0).join('\n\n');
-			
+			let displayText = [beforeHtml, afterHtml]
+				.filter((text) => text.length > 0)
+				.join("\n\n");
+
 			// If no display text, provide a default message
 			if (!displayText) {
 				displayText = "Preview updated. What's next?";
 			}
-			
-			return { 
-				html: htmlContent, 
-				displayText, 
-				originalMessage 
+
+			return {
+				html: htmlContent,
+				displayText,
+				originalMessage,
 			};
 		}
-		
+
 		// If no HTML found, treat entire content as display text
-		return { 
-			html: null, 
-			displayText: rawContent, 
-			originalMessage 
+		return {
+			html: null,
+			displayText: rawContent,
+			originalMessage,
 		};
 	}
 
@@ -148,15 +160,20 @@
 		isRefinement: boolean = false,
 	): Promise<void> {
 		lastBotRawMessageContent = rawBotContent;
-		
+
 		// Parse the bot response to separate HTML and display message
-		const { html, displayText, originalMessage } = extractAndCleanBotResponse(rawBotContent);
-		
+		const { html, displayText, originalMessage } =
+			extractAndCleanBotResponse(rawBotContent);
+
 		// Use the extracted display text or provide a default
-		const finalDisplayText = displayText || (isRefinement ? "Preview refined. Any further instructions?" : "Page created/updated. What's next?");
+		const finalDisplayText =
+			displayText ||
+			(isRefinement
+				? "Preview refined. Any further instructions?"
+				: "Page created/updated. What's next?");
 
 		const botMessage: BotChatEvent = {
-			id: generateId(), 
+			id: generateId(),
 			type: "bot",
 			content: finalDisplayText,
 			rawContent: rawBotContent,
@@ -174,14 +191,19 @@
 		messages = messages.map((msg) =>
 			msg.id === thinkingId ? botMessage : msg,
 		);
-		
+
 		try {
 			await chatEventStorage.store(botMessage, projectId);
 			if (currentProject?.id && html) {
-				await projectStorage.update(currentProject.id, { htmlContent: html });
+				await projectStorage.update(currentProject.id, {
+					htmlContent: html,
+				});
 			}
 		} catch (error) {
-			console.error("Failed to store bot message or update project:", error);
+			console.error(
+				"Failed to store bot message or update project:",
+				error,
+			);
 			addServerMessage("Error: Could not save changes.");
 		}
 	}
@@ -206,7 +228,7 @@
 
 	async function handleSendMessage(): Promise<void> {
 		if (!messageInput.trim() || isLoading) return;
-		if (!await checkApiKey()) return;
+		if (!(await checkApiKey())) return;
 
 		const userMessageContent = messageInput.trim();
 		messageInput = "";
@@ -220,25 +242,38 @@
 
 		try {
 			let newHtmlContent: string;
-			
+
 			// Determine if we should create a new page or refine existing content
-			const hasExistingContent = generatedHtml && 
-				generatedHtml.trim() !== "<!-- Start by typing a command to create your page. -->" && 
+			const hasExistingContent =
+				generatedHtml &&
+				generatedHtml.trim() !==
+					"<!-- Start by typing a command to create your page. -->" &&
 				generatedHtml.trim() !== "";
 
 			if (hasExistingContent) {
 				// If there's existing HTML content, refine it
-				newHtmlContent = await refinePage(generatedHtml, userMessageContent);
-				await storeAndReplaceThinkingWithBotMessage(thinkingId, newHtmlContent, true);
+				newHtmlContent = await refinePage(
+					generatedHtml,
+					userMessageContent,
+				);
+				await storeAndReplaceThinkingWithBotMessage(
+					thinkingId,
+					newHtmlContent,
+					true,
+				);
 			} else {
 				// If no existing content, create a new page
 				newHtmlContent = await createInitialPage(userMessageContent);
-				await storeAndReplaceThinkingWithBotMessage(thinkingId, newHtmlContent, false);
+				await storeAndReplaceThinkingWithBotMessage(
+					thinkingId,
+					newHtmlContent,
+					false,
+				);
 			}
-
 		} catch (error: any) {
 			messages = messages.filter((msg) => msg.id !== thinkingId);
-			const errorMsg = error.message || "Failed to process request. Please try again.";
+			const errorMsg =
+				error.message || "Failed to process request. Please try again.";
 			addServerMessage(`Error: ${errorMsg}`);
 			console.error("API request error:", error);
 		} finally {
@@ -249,10 +284,10 @@
 
 	async function handleRefine(): Promise<void> {
 		if (!messageInput.trim() || isLoading || !generatedHtml) return;
-		if (!await checkApiKey()) return;
+		if (!(await checkApiKey())) return;
 
 		const refineInstruction = messageInput.trim();
-		messageInput = ""; 
+		messageInput = "";
 		isLoading = true;
 
 		await storeAndAddUserMessage(refineInstruction, "Refine");
@@ -263,13 +298,20 @@
 
 		try {
 			// Call client-side API for refining content
-			const refinedHtmlContent = await refinePage(generatedHtml, refineInstruction);
+			const refinedHtmlContent = await refinePage(
+				generatedHtml,
+				refineInstruction,
+			);
 
-			await storeAndReplaceThinkingWithBotMessage(thinkingId, refinedHtmlContent, true);
-			
+			await storeAndReplaceThinkingWithBotMessage(
+				thinkingId,
+				refinedHtmlContent,
+				true,
+			);
 		} catch (error: any) {
 			messages = messages.filter((msg) => msg.id !== thinkingId);
-			const errorMsg = error.message || "Failed to refine page. Please try again.";
+			const errorMsg =
+				error.message || "Failed to refine page. Please try again.";
 			addServerMessage(`Error refining: ${errorMsg}`);
 			console.error("Refine page error:", error);
 		} finally {
@@ -300,17 +342,19 @@
 	let showApiKeyModal = $state(false);
 
 	async function checkApiKey() {
-		const storedKey = await settingsStorage.getSetting<string>(apiKeyStorageKey);
+		const storedKey =
+			await settingsStorage.getSetting<string>(apiKeyStorageKey);
 		if (!storedKey) {
 			// Option 1: Redirect to API key page
 			// await goto('/ask-for-api-key');
 			// Option 2: Show a modal or message on this page
 			showApiKeyModal = true;
-			errorMessage = 'OpenRouter API Key is not set. Please configure it in settings.';
+			errorMessage =
+				"OpenRouter API Key is not set. Please configure it in settings.";
 			return false;
 		}
 		showApiKeyModal = false;
-		errorMessage = '';
+		errorMessage = "";
 		return true;
 	}
 
@@ -321,13 +365,22 @@
 		scrollToBottom();
 
 		try {
-			addServerMessage("Auto-generating initial page based on your prompt...");
+			addServerMessage(
+				"Auto-generating initial page based on your prompt...",
+			);
 			scrollToBottom();
-			const newHtmlContent = await createInitialPage(initialPromptContent);
-			await storeAndReplaceThinkingWithBotMessage(thinkingId, newHtmlContent, false);
+			const newHtmlContent =
+				await createInitialPage(initialPromptContent);
+			await storeAndReplaceThinkingWithBotMessage(
+				thinkingId,
+				newHtmlContent,
+				false,
+			);
 		} catch (error: any) {
 			messages = messages.filter((msg) => msg.id !== thinkingId); // Remove thinking message on error
-			const errorMsg = error.message || "Failed to auto-generate initial page. Please try again.";
+			const errorMsg =
+				error.message ||
+				"Failed to auto-generate initial page. Please try again.";
 			addServerMessage(`Error: ${errorMsg}`);
 			console.error("Auto-generate initial page error:", error);
 		} finally {
@@ -340,10 +393,10 @@
 		try {
 			await chatEventStorage.update(messageId, { isSent: true });
 			// Update local messages array
-			messages = messages.map(msg => 
-				msg.id === messageId && msg.type === 'user' 
-					? { ...msg, isSent: true } 
-					: msg
+			messages = messages.map((msg) =>
+				msg.id === messageId && msg.type === "user"
+					? { ...msg, isSent: true }
+					: msg,
 			);
 		} catch (error) {
 			console.error("Failed to mark message as sent:", error);
@@ -351,42 +404,51 @@
 	}
 
 	onMount(async () => {
-		if (!await checkApiKey()) {
+		if (!(await checkApiKey())) {
 			// API key not present, modal shown by checkApiKey
 		}
 
 		const loadedProject = await projectStorage.get(projectId);
 		if (loadedProject) {
 			currentProject = loadedProject;
-			generatedHtml = loadedProject.htmlContent || "<!-- Start by typing a command to create your page. -->";
+			generatedHtml =
+				loadedProject.htmlContent ||
+				"<!-- Start by typing a command to create your page. -->";
 		} else {
-			errorMessage = 'Project not found. You can start a new one by typing a description.';
+			errorMessage =
+				"Project not found. You can start a new one by typing a description.";
 			// Potentially redirect or allow creation if it's a truly new ID not yet in DB
 			// For now, we assume MainPageInput creates the project entry first.
 		}
-		
+
 		// Load chat history for the project
 		const loadedMessages = await chatEventStorage.getByProject(projectId);
 		messages = loadedMessages;
-		
 
 		// Check for unsent user messages and process them
-		const unsentUserMessages = messages.filter(msg => 
-			msg.type === 'user' && !(msg as UserChatEvent).isSent
+		const unsentUserMessages = messages.filter(
+			(msg) => msg.type === "user" && !(msg as UserChatEvent).isSent,
 		) as UserChatEvent[];
 
-		if (unsentUserMessages.length > 0 && await checkApiKey()) {
+		if (unsentUserMessages.length > 0 && (await checkApiKey())) {
 			// Process the first unsent message (usually the initial prompt)
 			const firstUnsentMessage = unsentUserMessages[0];
 			await markUserMessageAsSent(firstUnsentMessage.id);
 			await triggerInitialPageGeneration(firstUnsentMessage.content);
-		} else if (currentProject?.htmlContent && currentProject.htmlContent !== "<!-- Start by typing a command to create your page. -->") {
+		} else if (
+			currentProject?.htmlContent &&
+			currentProject.htmlContent !==
+				"<!-- Start by typing a command to create your page. -->"
+		) {
 			// If there's existing HTML content in the project, ensure the preview reflects it,
 			// especially if chat history might have a more recent bot message with HTML.
 			const lastBotMessageWithHtml = messages
 				.slice()
 				.reverse()
-				.find(msg => msg.type === 'bot' && (msg as BotChatEvent).htmlContent) as BotChatEvent | undefined;
+				.find(
+					(msg) =>
+						msg.type === "bot" && (msg as BotChatEvent).htmlContent,
+				) as BotChatEvent | undefined;
 
 			if (lastBotMessageWithHtml?.htmlContent) {
 				generatedHtml = lastBotMessageWithHtml.htmlContent;
@@ -394,7 +456,7 @@
 				generatedHtml = currentProject.htmlContent;
 			}
 		}
-		
+
 		scrollToBottom();
 	});
 
@@ -409,14 +471,21 @@
 	let iframeSrcDoc = $derived(generatedHtml);
 
 	function handleDownloadHtml() {
-		if (!generatedHtml || generatedHtml.trim() === "<!-- Start by typing a command to create your page. -->" || generatedHtml.trim() === "") {
-			addServerMessage("Nothing to download. Generate some content first.");
+		if (
+			!generatedHtml ||
+			generatedHtml.trim() ===
+				"<!-- Start by typing a command to create your page. -->" ||
+			generatedHtml.trim() === ""
+		) {
+			addServerMessage(
+				"Nothing to download. Generate some content first.",
+			);
 			return;
 		}
-		const blob = new Blob([generatedHtml], { type: 'text/html' });
-		const link = document.createElement('a');
+		const blob = new Blob([generatedHtml], { type: "text/html" });
+		const link = document.createElement("a");
 		link.href = URL.createObjectURL(blob);
-		link.download = 'index.html';
+		link.download = "index.html";
 		document.body.appendChild(link);
 		link.click();
 		document.body.removeChild(link);
@@ -426,22 +495,22 @@
 
 	function startBuilding() {
 		if (!messageInput.trim()) return;
-		
+
 		isLoading = true;
 		try {
 			// TODO: Implement your building logic here
 			// This could be an API call to generate the website
-			console.log('Building with prompt:', messageInput);
-			
+			console.log("Building with prompt:", messageInput);
+
 			// Simulated building process
 			setTimeout(() => {
-				addServerMessage('Website built successfully!');
+				addServerMessage("Website built successfully!");
 				isLoading = false;
 				scrollToBottom();
 			}, 2000);
 		} catch (error) {
-			console.error('Building failed:', error);
-			addServerMessage('Building failed. Please try again.');
+			console.error("Building failed:", error);
+			addServerMessage("Building failed. Please try again.");
 			isLoading = false;
 			scrollToBottom();
 		}
@@ -449,13 +518,16 @@
 </script>
 
 <svelte:head>
-	<title>{currentProject ? currentProject.name : 'inja.online'}</title>
+	<title>{currentProject ? currentProject.name : "inja.online"}</title>
 </svelte:head>
 
 <div class="flex flex-col h-screen bg-zinc-900 text-white">
 	{#if showApiKeyModal}
 		<div class="p-4 bg-red-700 text-center">
-			{errorMessage} <a href="/ask-for-api-key" class="underline hover:text-zinc-300">Set API Key</a>
+			{errorMessage}
+			<a href="/ask-for-api-key" class="underline hover:text-zinc-300"
+				>Set API Key</a
+			>
 		</div>
 	{/if}
 
@@ -464,7 +536,10 @@
 		<div class="flex items-center space-x-4">
 			<Header project={currentProject} />
 		</div>
-		<a href="/settings" class="text-zinc-400 hover:text-white transition-colors duration-200 text-sm flex items-center gap-2">
+		<a
+			href="/settings"
+			class="text-zinc-400 hover:text-white transition-colors duration-200 text-sm flex items-center gap-2"
+		>
 			<Settings size={16} />
 			Settings
 		</a>
@@ -477,13 +552,19 @@
 			class="bg-dark-secondary border-r border-primary-accent flex flex-col"
 			style="width: {leftPanelWidth}%"
 		>
-			<div class="p-6 border-b border-primary-accent flex justify-between items-center">
+			<div
+				class="p-6 border-b border-primary-accent flex justify-between items-center"
+			>
 				<span class="text-white font-medium">Preview</span>
 				<button
 					onclick={handleDownloadHtml}
-					disabled={!generatedHtml || generatedHtml.includes("Start by typing")}
+					disabled={!generatedHtml ||
+						generatedHtml.includes("Start by typing")}
 					class="text-zinc-400 hover:text-white disabled:text-zinc-600 disabled:cursor-not-allowed transition-colors duration-200"
-					title={(!generatedHtml || generatedHtml.includes("Start by typing")) ? "Generate content to enable download" : "Download HTML"}
+					title={!generatedHtml ||
+					generatedHtml.includes("Start by typing")
+						? "Generate content to enable download"
+						: "Download HTML"}
 				>
 					<Download size={20} />
 				</button>
@@ -502,7 +583,11 @@
 					></iframe>
 				{:else}
 					<div class="flex items-center justify-center h-full">
-						<span class="text-zinc-500">{ generatedHtml.includes("Start by typing") ? "Start by typing a command to create your page." : "No preview available. Generate content via chat."}</span>
+						<span class="text-zinc-500"
+							>{generatedHtml.includes("Start by typing")
+								? "Start by typing a command to create your page."
+								: "No preview available. Generate content via chat."}</span
+						>
 					</div>
 				{/if}
 			</div>
@@ -621,16 +706,25 @@
 					></textarea>
 					<button
 						onclick={handleSendMessage}
-						disabled={!messageInput.trim() || isLoading || showApiKeyModal}
+						disabled={!messageInput.trim() ||
+							isLoading ||
+							showApiKeyModal}
 						class="bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-100 px-6 py-2 rounded-lg font-medium transition-colors duration-200 disabled:cursor-not-allowed"
 					>
 						{isLoading ? "Sending..." : "Send"}
 					</button>
 					<button
 						onclick={handleRefine}
-						disabled={!messageInput.trim() || isLoading || !generatedHtml || generatedHtml.includes("Start by typing") || showApiKeyModal}
+						disabled={!messageInput.trim() ||
+							isLoading ||
+							!generatedHtml ||
+							generatedHtml.includes("Start by typing") ||
+							showApiKeyModal}
 						class="bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-100 px-6 py-2 rounded-lg font-medium transition-colors duration-200 disabled:cursor-not-allowed"
-						title={(!generatedHtml || generatedHtml.includes("Start by typing")) ? "Generate some HTML first to enable refine" : "Refine existing HTML"}
+						title={!generatedHtml ||
+						generatedHtml.includes("Start by typing")
+							? "Generate some HTML first to enable refine"
+							: "Refine existing HTML"}
 					>
 						Refine
 					</button>
