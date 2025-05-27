@@ -19,8 +19,8 @@
 	import Header from "$lib/components/Header.svelte";
 	import Footer from "$lib/components/Footer.svelte";
 	import { createInitialPage, refinePage } from "$lib/apis/openrouter";
-    import ChatLayout from "$lib/components/chat/ChatLayout.svelte";
-	
+	import ChatLayout from "$lib/components/chat/ChatLayout.svelte";
+
 	// Original resizing state
 	let leftPanelWidth = $state(70);
 	let isResizing = $state(false);
@@ -526,16 +526,15 @@
 	{#if showApiKeyModal}
 		<div class="p-4 bg-red-700 text-center">
 			{errorMessage}
-			<a href="/ask-for-api-key" class="underline hover:text-zinc-300"
-				>Set API Key</a
-			>
+			<a href="/ask-for-api-key" class="underline hover:text-zinc-300">
+				Set API Key
+			</a>
 		</div>
 	{/if}
 
 	<!-- Header -->
 	<Header project={currentProject} />
 
-	
 	<!-- Main Content Layout -->
 	<div class="flex flex-1 overflow-hidden" bind:this={containerRef}>
 		<!-- Main Content Pane (Left) -->
@@ -544,7 +543,7 @@
 			style="width: {leftPanelWidth}%"
 		>
 			<div
-				class="p-6 border-b border-primary-accent flex justify-between items-center"
+				class="p-2 px-4 border-b border-primary-accent flex justify-between items-center"
 			>
 				<span class="text-white font-medium">Preview</span>
 				<button
@@ -563,7 +562,7 @@
 
 			<!-- Iframe Container -->
 			<div
-				class="flex-1 bg-white m-6 border border-primary-accent rounded-md overflow-hidden"
+				class="flex-1 bg-white m-4 border border-primary-accent rounded-md overflow-hidden"
 			>
 				{#if generatedHtml && generatedHtml.trim() !== "<!-- Start by typing a command to create your page. -->" && generatedHtml.trim() !== ""}
 					<iframe
@@ -603,17 +602,14 @@
 		<!-- Chat Sidebar (Right) -->
 		<div class="flex-1 flex flex-col">
 			<!-- Header -->
-			<header class="border-b border-zinc-800 p-4">
-				<h1 class="text-xl font-semibold text-zinc-100">
+			<header class="border-b border-zinc-800 p-2 px-4">
+				<h1 class="text-md font-semibold text-zinc-100">
 					{currentProject ? currentProject.name : `Chat ${projectId}`}
 				</h1>
 			</header>
 
 			<!-- Messages Container -->
-			<div
-				bind:this={messagesContainer}
-				class="chat-section"
-			>
+			<div bind:this={messagesContainer} class="chat-section">
 				<ChatLayout events={messages} />
 			</div>
 
@@ -659,8 +655,8 @@
 </div>
 
 <style>
-	.chat-section{
-		height: calc(100vh - 200px);
+	.chat-section {
+		height: calc(100vh - 180px);
 		overflow: auto;
 	}
 </style>
