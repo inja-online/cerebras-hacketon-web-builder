@@ -1,11 +1,17 @@
-import { settingsStorage } from '$lib/storage';
-import { getSystemPrompt, getInitialPrompt, getRefinementPrompt, REFINE_SYSTEM_PROMPT } from './prompts';
+import { settingsStorage } from "$lib/storage";
+import {
+  getSystemPrompt,
+  getInitialPrompt,
+  getRefinementPrompt,
+  REFINE_SYSTEM_PROMPT,
+  GET_TITLE_PROMPT,
+} from "./prompts";
 
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const API_KEY_STORAGE_KEY = 'openrouter_api_key';
+const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+const API_KEY_STORAGE_KEY = "openrouter_api_key";
 
 export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
 }
 
@@ -22,17 +28,19 @@ export interface ChatCompletionResponse {
 async function getApiKey(): Promise<string> {
   const apiKey = await settingsStorage.getSetting<string>(API_KEY_STORAGE_KEY);
   if (!apiKey) {
-    throw new Error('OpenRouter API key not found. Please set it in the application settings.');
+    throw new Error(
+      "OpenRouter API key not found. Please set it in the application settings.",
+    );
   }
   return apiKey;
 }
 
 export function extractHtmlContent(content: string): string {
   let result = content;
-  if (result.startsWith('```html')) {
+  if (result.startsWith("```html")) {
     result = result.slice(7);
   }
-  if (result.endsWith('```')) {
+  if (result.endsWith("```")) {
     result = result.slice(0, -3);
   }
   return result.trim();
@@ -40,62 +48,83 @@ export function extractHtmlContent(content: string): string {
 
 async function callOpenRouterApi(
   messages: ChatMessage[],
-  model: string = 'qwen/qwen3-32b' // Default model
+  model: string = "qwen/qwen3-32b", // Default model
 ): Promise<string> {
   const apiKey = await getApiKey();
 
   const headers = {
-    'Authorization': `Bearer ${apiKey}`,
-    'Content-Type': 'application/json'
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
   };
 
   const body = {
     model: model,
-    provider: { // Specify provider if needed, or remove if model implies it
-        only: ['Cerebras']
+    provider: {
+      // Specify provider if needed, or remove if model implies it
+      only: ["Cerebras"],
     },
-    messages
+    messages,
   };
 
   try {
     const response = await fetch(OPENROUTER_API_URL, {
-      method: 'POST',
+      method: "POST",
       headers,
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error('OpenRouter API error response:', errorBody);
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorBody}`);
+      console.error("OpenRouter API error response:", errorBody);
+      throw new Error(
+        `HTTP error! status: ${response.status}, message: ${errorBody}`,
+      );
     }
 
     const data: ChatCompletionResponse = await response.json();
 
-    if (data.choices && data.choices.length > 0 && data.choices[0].message.content) {
+    if (
+      data.choices &&
+      data.choices.length > 0 &&
+      data.choices[0].message.content
+    ) {
       return data.choices[0].message.content;
     } else {
-      throw new Error('No content in OpenRouter API response');
+      throw new Error("No content in OpenRouter API response");
     }
   } catch (error) {
-    console.error('Error calling OpenRouter API:', error);
+    console.error("Error calling OpenRouter API:", error);
     throw error; // Re-throw to be handled by the caller
   }
 }
 
 export async function createInitialPage(userPrompt: string): Promise<string> {
   const messages: ChatMessage[] = [
-    { role: 'system', content: getSystemPrompt() },
-    { role: 'user', content: getInitialPrompt(userPrompt) }
+    { role: "system", content: getSystemPrompt() },
+    { role: "user", content: getInitialPrompt(userPrompt) },
   ];
   const rawContent = await callOpenRouterApi(messages);
   return extractHtmlContent(rawContent);
 }
 
-export async function refinePage(originalHtml: string, userRequest: string): Promise<string> {
+export async function generateChatTitle(userPrompt: string): Promise<string> {
   const messages: ChatMessage[] = [
-    { role: 'system', content: REFINE_SYSTEM_PROMPT },
-    { role: 'user', content: getRefinementPrompt(originalHtml, userRequest) }
+    { role: "system", content: GET_TITLE_PROMPT(userPrompt) },
+    { role: "user", content: userPrompt },
+  ];
+  const rawContent = await callOpenRouterApi(messages);
+  // The title prompt is designed to return just the title, no HTML or markdown.
+  // So we can return the raw content directly after trimming.
+  return rawContent.trim();
+}
+
+export async function refinePage(
+  originalHtml: string,
+  userRequest: string,
+): Promise<string> {
+  const messages: ChatMessage[] = [
+    { role: "system", content: REFINE_SYSTEM_PROMPT },
+    { role: "user", content: getRefinementPrompt(originalHtml, userRequest) },
   ];
   const rawContent = await callOpenRouterApi(messages);
   return extractHtmlContent(rawContent);

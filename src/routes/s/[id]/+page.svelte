@@ -18,7 +18,11 @@
 	} from "$lib/types.js";
 	import Header from "$lib/components/Header.svelte";
 	import Footer from "$lib/components/Footer.svelte";
-	import { createInitialPage, refinePage } from "$lib/apis/openrouter";
+	import {
+		createInitialPage,
+		generateChatTitle,
+		refinePage,
+	} from "$lib/apis/openrouter";
 	import ChatLayout from "$lib/components/chat/ChatLayout.svelte";
 
 	// Original resizing state
@@ -35,7 +39,7 @@
 		"<!-- Start by typing a command to create your page. -->",
 	); // Initialize with a placeholder
 	let lastBotRawMessageContent: string | null = $state(null);
-	let currentProject: Project | null | undefined = $state(null);
+	let currentProject: Project | undefined = $state(undefined);
 
 	const projectId = $page.params.id;
 	const userId = "user-1";
@@ -360,7 +364,6 @@
 	}
 
 	async function triggerInitialPageGeneration(initialPromptContent: string) {
-		debugger;
 		if (isLoading) return;
 		isLoading = true;
 		const thinkingId = addThinkingMessage();
@@ -463,6 +466,15 @@
 			const firstUnsentMessage = unsentUserMessages[0];
 			await markUserMessageAsSent(firstUnsentMessage.id);
 			await triggerInitialPageGeneration(firstUnsentMessage.content);
+			const generatedTitle = await generateChatTitle(
+				firstUnsentMessage.content,
+			);
+			if (currentProject) {
+				currentProject.name = generatedTitle;
+				await projectStorage.update(currentProject.id, {
+					name: generatedTitle,
+				});
+			}
 		} else if (
 			currentProject?.htmlContent &&
 			currentProject.htmlContent !==
@@ -595,8 +607,6 @@
 						class="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-zinc-100 placeholder-zinc-400 resize-none focus:ring-2 focus:ring-zinc-600 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
 						rows="1"
 					></textarea>
-
-
 				</div>
 			</div>
 		</div>

@@ -78,3 +78,13 @@ For images, if new ones are needed, use placeholders from: https://picsum.photos
 Focus strictly on applying the user's requested changes to the provided HTML.
 Output ONLY the refined HTML content.
 `;
+
+export const GET_TITLE_PROMPT = (userRequest: string) => `
+Generate a very short, concise title (5 words or less) based on the following user request.
+The title should capture the main subject of the request and be suitable for use as a chat or project title.
+Respond with ONLY the title text, no extra words or punctuation.
+
+User request: "${userRequest}"
+
+Title:
+`;
