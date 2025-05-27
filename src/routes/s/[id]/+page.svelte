@@ -532,19 +532,9 @@
 	{/if}
 
 	<!-- Header -->
-	<div class="flex justify-between items-center p-4 border-b border-zinc-800">
-		<div class="flex items-center space-x-4">
-			<Header project={currentProject} />
-		</div>
-		<a
-			href="/settings"
-			class="text-zinc-400 hover:text-white transition-colors duration-200 text-sm flex items-center gap-2"
-		>
-			<Settings size={16} />
-			Settings
-		</a>
-	</div>
+	<Header project={currentProject} />
 
+	
 	<!-- Main Content Layout -->
 	<div class="flex flex-1 overflow-hidden" bind:this={containerRef}>
 		<!-- Main Content Pane (Left) -->
