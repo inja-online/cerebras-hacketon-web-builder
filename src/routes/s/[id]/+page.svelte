@@ -360,7 +360,8 @@
 	}
 
 	async function triggerInitialPageGeneration(initialPromptContent: string) {
-		if (isLoading) return; // Prevent multiple triggers
+		debugger;
+		if (isLoading) return;
 		isLoading = true;
 		const thinkingId = addThinkingMessage();
 		scrollToBottom();
@@ -404,6 +405,33 @@
 		}
 	}
 
+	// Use generatedHtml for iframeSrcDoc directly
+	let iframeSrcDoc = $derived(generatedHtml);
+
+	function handleDownloadHtml() {
+		if (
+			!generatedHtml ||
+			generatedHtml.trim() ===
+				"<!-- Start by typing a command to create your page. -->" ||
+			generatedHtml.trim() === ""
+		) {
+			addServerMessage(
+				"Nothing to download. Generate some content first.",
+			);
+			return;
+		}
+		const blob = new Blob([generatedHtml], { type: "text/html" });
+		const link = document.createElement("a");
+		link.href = URL.createObjectURL(blob);
+		link.download = "index.html";
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(link.href);
+		addServerMessage("HTML content downloaded as index.html");
+	}
+
+
 	onMount(async () => {
 		if (!(await checkApiKey())) {
 			// API key not present, modal shown by checkApiKey
@@ -431,6 +459,7 @@
 			(msg) => msg.type === "user" && !(msg as UserChatEvent).isSent,
 		) as UserChatEvent[];
 
+		console.log(unsentUserMessages)
 		if (unsentUserMessages.length > 0 && (await checkApiKey())) {
 			// Process the first unsent message (usually the initial prompt)
 			const firstUnsentMessage = unsentUserMessages[0];
@@ -461,61 +490,7 @@
 		scrollToBottom();
 	});
 
-	// Remove handleRefineRequest as its functionality is covered by handleRefine via chat
-	/*
-	async function handleRefineRequest() {
-		// ... This function is no longer needed ...
-	}
-	*/
 
-	// Use generatedHtml for iframeSrcDoc directly
-	let iframeSrcDoc = $derived(generatedHtml);
-
-	function handleDownloadHtml() {
-		if (
-			!generatedHtml ||
-			generatedHtml.trim() ===
-				"<!-- Start by typing a command to create your page. -->" ||
-			generatedHtml.trim() === ""
-		) {
-			addServerMessage(
-				"Nothing to download. Generate some content first.",
-			);
-			return;
-		}
-		const blob = new Blob([generatedHtml], { type: "text/html" });
-		const link = document.createElement("a");
-		link.href = URL.createObjectURL(blob);
-		link.download = "index.html";
-		document.body.appendChild(link);
-		link.click();
-		document.body.removeChild(link);
-		URL.revokeObjectURL(link.href);
-		addServerMessage("HTML content downloaded as index.html");
-	}
-
-	function startBuilding() {
-		if (!messageInput.trim()) return;
-
-		isLoading = true;
-		try {
-			// TODO: Implement your building logic here
-			// This could be an API call to generate the website
-			console.log("Building with prompt:", messageInput);
-
-			// Simulated building process
-			setTimeout(() => {
-				addServerMessage("Website built successfully!");
-				isLoading = false;
-				scrollToBottom();
-			}, 2000);
-		} catch (error) {
-			console.error("Building failed:", error);
-			addServerMessage("Building failed. Please try again.");
-			isLoading = false;
-			scrollToBottom();
-		}
-	}
 </script>
 
 <svelte:head>
@@ -600,7 +575,7 @@
 		</div>
 
 		<!-- Chat Sidebar (Right) -->
-		<div class="flex-1 flex flex-col">
+		<div class="flex-1 flex flex-col ">
 			<!-- Header -->
 			<header class="border-b border-zinc-800 p-2 px-4">
 				<h1 class="text-md font-semibold text-zinc-100">
@@ -656,7 +631,7 @@
 
 <style>
 	.chat-section {
-		height: calc(100vh - 180px);
+		height: calc(100vh - 185px);
 		overflow: auto;
 	}
 </style>

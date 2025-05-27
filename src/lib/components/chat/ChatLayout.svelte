@@ -49,7 +49,7 @@
 	}
 </script>
 
-<div class="flex-1 bg-dark-secondary flex flex-col">
+<div class="flex-1 bg-dark-secondary flex flex-col h-full">
 	<!-- Chat Messages -->
 	<ChatMessages {events} />
 	
