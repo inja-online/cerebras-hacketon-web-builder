@@ -7,8 +7,8 @@
 </script>
 
 <div class="flex justify-center">
-    <div class="bg-dark-secondary/50 border border-primary-accent/30 rounded-lg px-4 py-2">
-        <div class="text-sm text-secondary-accent text-center">
+    <div class="bg-dark-secondary/50 border border-primary-accent/30 rounded-lg px-4 py-2" style="max-width: 300px;">
+        <div class="text-sm text-secondary-accent text-center" style="overflow-wrap: break-word;">
             {event.content}
         </div>
     </div>
@@ -29,7 +29,7 @@
 
     .message-content {
         flex: 0 1 auto; /* Allow content to determine width, but not exceed container */
-        max-width: 80%; /* Limit width */
+        /* max-width: 80%; */ /* Limit width - Overridden by inline style */
     }
 
     .server-message-text {

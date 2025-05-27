@@ -13,8 +13,8 @@
 </script>
 
 <div class="flex justify-end">
-    <div class="max-w-[80%] bg-primary-accent/20 border border-primary-accent rounded-lg p-3">
-        <div class="text-white text-sm whitespace-pre-wrap">
+    <div class="bg-primary-accent/20 border border-primary-accent rounded-lg p-3" style="max-width: 300px;">
+        <div class="text-white text-sm whitespace-pre-wrap" style="overflow-wrap: break-word;">
             {#if event.content}
                 {@html event.content}
             {/if}

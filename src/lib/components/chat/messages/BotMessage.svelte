@@ -16,9 +16,9 @@
     <div class="w-8 h-8 bg-primary-accent/20 rounded-full flex items-center justify-center flex-shrink-0">
         <Bot class="w-4 h-4 text-primary-accent" />
     </div>
-    <div class="flex-1 max-w-[80%]">
+    <div class="flex-1" style="max-width: 300px;">
         <div class="bg-dark-secondary border border-primary-accent rounded-lg p-3">
-            <div class="text-white text-sm prose prose-invert max-w-none">
+            <div class="text-white text-sm prose prose-invert max-w-none" style="overflow-wrap: break-word;">
                 <Markdown md={event.content} plugins={[gfmPlugin(), highlightPlugin]} />
             </div>
             {#if event.config?.sources}
