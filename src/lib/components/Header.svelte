@@ -14,13 +14,21 @@
 			</div>
 		</header>
 	</div>
-	<a
-		href="/settings"
-		class="text-zinc-400 hover:text-white transition-colors duration-200 text-sm flex items-center gap-2"
-	>
-		<Settings size={16} />
-		Settings
-	</a>
+	<div class="flex items-center space-x-4">
+		<a
+			href="/"
+			class="text-zinc-400 hover:text-white transition-colors duration-200 text-sm flex items-center gap-2"
+		>
+			New Chat
+		</a>
+		<a
+			href="/settings"
+			class="text-zinc-400 hover:text-white transition-colors duration-200 text-sm flex items-center gap-2"
+		>
+			<Settings size={16} />
+			Settings
+		</a>
+	</div>
 </div>
 
 <style>
