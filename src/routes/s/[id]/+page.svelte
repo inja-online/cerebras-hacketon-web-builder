@@ -379,7 +379,7 @@
 				false,
 			);
 		} catch (error: any) {
-			messages = messages.filter((msg) => msg.id !== thinkingId); // Remove thinking message on error
+			messages = messages.filter((msg) => msg.id !== thinkingId);
 			const errorMsg =
 				error.message ||
 				"Failed to auto-generate initial page. Please try again.";
@@ -431,7 +431,6 @@
 		addServerMessage("HTML content downloaded as index.html");
 	}
 
-
 	onMount(async () => {
 		if (!(await checkApiKey())) {
 			// API key not present, modal shown by checkApiKey
@@ -459,7 +458,6 @@
 			(msg) => msg.type === "user" && !(msg as UserChatEvent).isSent,
 		) as UserChatEvent[];
 
-		console.log(unsentUserMessages)
 		if (unsentUserMessages.length > 0 && (await checkApiKey())) {
 			// Process the first unsent message (usually the initial prompt)
 			const firstUnsentMessage = unsentUserMessages[0];
@@ -489,8 +487,6 @@
 
 		scrollToBottom();
 	});
-
-
 </script>
 
 <svelte:head>
@@ -575,7 +571,7 @@
 		</div>
 
 		<!-- Chat Sidebar (Right) -->
-		<div class="flex-1 flex flex-col ">
+		<div class="flex-1 flex flex-col">
 			<!-- Header -->
 			<header class="border-b border-zinc-800 p-2 px-4">
 				<h1 class="text-md font-semibold text-zinc-100">

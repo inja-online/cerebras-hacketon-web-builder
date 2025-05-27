@@ -39,7 +39,7 @@ STICKLY FOLLOW WHAT USER WANTS. if user asks for a website with a specific theme
 
 create website for :
 `;
-export const getInitialPrompt = (_: string) => getSystemPrompt();
+export const getInitialPrompt = (init: string) => init.trim() ;
 export const getRefinementPrompt = (originalHtml: string, userRequest: string) => `
 user request is : ${userRequest}
 
