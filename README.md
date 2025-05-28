@@ -2,7 +2,11 @@
 
 A minimalist, AI-powered web development platform that transforms natural language descriptions into fully functional HTML websites. Built with SvelteKit 5 and powered by the Cerebras API for ultra-fast AI inference.
 
-Watch Announcement Video -> [Here](https://www.youtube.com/watch?v=XMm-aPl9zYQ)
+
+<a href="https://www.youtube.com/watch?v=XMm-aPl9zYQ">
+  <img src="https://img.youtube.com/vi/XMm-aPl9zYQ/hqdefault.jpg" style="width: 100%;" alt="Watch the demo"/>
+</a>
+
 
 
 
