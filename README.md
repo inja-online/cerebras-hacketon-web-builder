@@ -2,6 +2,10 @@
 
 A minimalist, AI-powered web development platform that transforms natural language descriptions into fully functional HTML websites. Built with SvelteKit 5 and powered by the Cerebras API for ultra-fast AI inference.
 
+Watch Announcement Video -> [Here](https://www.youtube.com/watch?v=XMm-aPl9zYQ)
+
+
+
 ## 🌟 Overview
 
 BUILDER.INJA.ONLINE is an innovative web builder that leverages artificial intelligence to generate complete, responsive HTML websites from simple text descriptions. Users can describe their vision in plain English, and the AI will create a fully functional website using modern web technologies like Alpine.js, Tailwind CSS, and Lucide Icons.
