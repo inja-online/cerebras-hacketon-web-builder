@@ -62,8 +62,8 @@ BUILDER.INJA.ONLINE is an innovative web builder that leverages artificial intel
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd cerebras-hacketon-web-builder
+git clone git@github.com:inja-online/inja-builder.git
+cd inja-builder
 ```
 
 2. Install dependencies:
