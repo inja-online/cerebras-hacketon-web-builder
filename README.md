@@ -2,6 +2,14 @@
 
 A minimalist, AI-powered web development platform that transforms natural language descriptions into fully functional HTML websites. Built with SvelteKit 5 and powered by the Cerebras API for ultra-fast AI inference.
 
+
+<a href="https://www.youtube.com/watch?v=XMm-aPl9zYQ">
+  <img src="https://img.youtube.com/vi/XMm-aPl9zYQ/hqdefault.jpg" style="width: 100%;" alt="Watch the demo"/>
+</a>
+
+
+
+
 ## 🌟 Overview
 
 BUILDER.INJA.ONLINE is an innovative web builder that leverages artificial intelligence to generate complete, responsive HTML websites from simple text descriptions. Users can describe their vision in plain English, and the AI will create a fully functional website using modern web technologies like Alpine.js, Tailwind CSS, and Lucide Icons.
@@ -54,8 +62,8 @@ BUILDER.INJA.ONLINE is an innovative web builder that leverages artificial intel
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd cerebras-hacketon-web-builder
+git clone git@github.com:inja-online/inja-builder.git
+cd inja-builder
 ```
 
 2. Install dependencies:

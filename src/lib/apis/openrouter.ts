@@ -25,6 +25,18 @@ export interface ChatCompletionResponse {
   // Add other fields if necessary, like 'id', 'model', 'usage', etc.
 }
 
+export interface Model {
+  id: string;
+  name: string;
+  description: string;
+  context_length: number;
+  // Add other relevant fields from the OpenRouter /models endpoint
+}
+
+export interface ModelsResponse {
+  data: Model[];
+}
+
 async function getApiKey(): Promise<string> {
   const apiKey = await settingsStorage.getSetting<string>(API_KEY_STORAGE_KEY);
   if (!apiKey) {
@@ -46,7 +58,7 @@ export function extractHtmlContent(content: string): string {
   return result.trim();
 }
 
-async function callOpenRouterApi(
+export async function callOpenRouterApi(
   messages: ChatMessage[],
   model: string = "qwen/qwen3-32b", // Default model
   providerId: string | null = "Cerebras", // Added providerId, default to Cerebras
@@ -138,4 +150,48 @@ export async function refinePage(
   ];
   const rawContent = await callOpenRouterApi(messages, model, providerId);
   return extractHtmlContent(rawContent);
+}
+
+export async function checkConnectionAndListModels(apiKeyOverride?: string): Promise<Model[]> {
+  const apiKey = apiKeyOverride || await getApiKey();
+  const headers = {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+
+  try {
+    // Attempt to filter by provider directly in the API call
+    const response = await fetch("https://openrouter.ai/api/v1/models?provider=anthropic", {
+      method: "GET",
+      headers
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("OpenRouter API error response (models):", errorBody);
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const parsedError = JSON.parse(errorBody);
+        if (parsedError.error && parsedError.error.message) {
+          errorMessage += `, message: ${parsedError.error.message}`;
+        } else {
+          errorMessage += `, message: ${errorBody}`;
+        }
+      } catch (e) {
+        errorMessage += `, message: ${errorBody}`;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data: ModelsResponse = await response.json();
+    
+    if (data.data && Array.isArray(data.data)) {
+      return data.data;
+    } else {
+      throw new Error("No model data in OpenRouter API response or unexpected format");
+    }
+  } catch (error) {
+    console.error("Error fetching models from OpenRouter API:", error);
+    throw error; // Re-throw to be handled by the caller
+  }
 }
