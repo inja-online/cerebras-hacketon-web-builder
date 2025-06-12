@@ -30,11 +30,9 @@
             >
             <div class="flex items-center space-x-4">
                 <a
-                    href="https://blog.inja.online/how-we-built-this"
-                    target="_blank"
-                    rel="noopener noreferrer"
                     class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-full text-primary-accent hover:bg-zinc-800 hover:border-primary-accent hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-accent transition-all duration-200 shadow-sm group animate-bounce-slow"
                     title="Learn more about how we built this"
+                    href="https://mamad.dev/en/blog/builder-inja-online"
                 >
                     <BookOpen size={18} class="transition-colors duration-200 group-hover:text-white" />
                     <span class="text-sm font-medium tracking-wide">Learn More</span>

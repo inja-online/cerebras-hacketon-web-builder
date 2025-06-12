@@ -2,8 +2,15 @@
     import type { ChatEvent } from '../../types';
     import ChatMessage from './ChatMessage.svelte';
 
-    let { events = [] } = $props<{
+    let { events = [] ,
+		onDownloadHtmlFromMessage,
+		onRevertToHtmlFromMessage,
+        onRetryFromMessage,
+    } = $props<{
         events: ChatEvent[];
+        onDownloadHtmlFromMessage?: (htmlContent: string, messageId: string) => void;
+        onRevertToHtmlFromMessage?: (htmlContent: string) => void;
+        onRetryFromMessage?: (botMessageId: string) => void;
     }>();
 </script>
 
@@ -13,14 +20,12 @@
             {#if event.type === 'thinking'}
                 thinking...
             {:else}
-                <ChatMessage {event} />
+                <ChatMessage {event} 
+                    onDownloadHtmlFromMessage={onDownloadHtmlFromMessage} 
+                    onRevertToHtmlFromMessage={onRevertToHtmlFromMessage}
+                    onRetryFromMessage={onRetryFromMessage}
+                />
             {/if}
         {/each}
     </div>
 </div>
-
-<style>
-    .chat-view {
-        width: 100%;
-    }
-</style>

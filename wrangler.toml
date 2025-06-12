@@ -13,3 +13,7 @@ binding = "ASSETS"
 [env.production]
 workers_dev = false
 route = "builder.inja.online/*"
+
+# wrangler.toml (wrangler v3.88.0^)
+[observability.logs]
+enabled = true

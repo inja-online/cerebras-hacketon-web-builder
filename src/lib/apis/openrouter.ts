@@ -62,6 +62,7 @@ export function extractHtmlContent(content: string): string {
 export async function callOpenRouterApi(
   messages: ChatMessage[],
   model: string = "qwen/qwen3-32b", // Default model
+  providerId: string | null = "Cerebras", // Added providerId, default to Cerebras
 ): Promise<string> {
   const apiKey = await getApiKey();
 
@@ -70,14 +71,16 @@ export async function callOpenRouterApi(
     "Content-Type": "application/json",
   };
 
-  const body = {
+  const body: any = {
     model: model,
-    provider: {
-      // Specify provider if needed, or remove if model implies it
-      only: ["Cerebras"],
-    },
     messages,
   };
+
+  if (providerId) {
+    body.provider = {
+      only: [providerId],
+    };
+  }
 
   try {
     const response = await fetch(OPENROUTER_API_URL, {
@@ -111,12 +114,16 @@ export async function callOpenRouterApi(
   }
 }
 
-export async function createInitialPage(userPrompt: string): Promise<string> {
+export async function createInitialPage(
+  userPrompt: string,
+  model: string,
+  providerId: string | null,
+): Promise<string> {
   const messages: ChatMessage[] = [
     { role: "system", content: getSystemPrompt() },
     { role: "user", content: getInitialPrompt(userPrompt) },
   ];
-  const rawContent = await callOpenRouterApi(messages);
+  const rawContent = await callOpenRouterApi(messages, model, providerId);
   return extractHtmlContent(rawContent);
 }
 
@@ -125,6 +132,7 @@ export async function generateChatTitle(userPrompt: string): Promise<string> {
     { role: "system", content: GET_TITLE_PROMPT(userPrompt) },
     { role: "user", content: userPrompt },
   ];
+  // Uses default model and provider from callOpenRouterApi
   const rawContent = await callOpenRouterApi(messages);
   // The title prompt is designed to return just the title, no HTML or markdown.
   // So we can return the raw content directly after trimming.
@@ -134,12 +142,14 @@ export async function generateChatTitle(userPrompt: string): Promise<string> {
 export async function refinePage(
   originalHtml: string,
   userRequest: string,
+  model: string,
+  providerId: string | null,
 ): Promise<string> {
   const messages: ChatMessage[] = [
     { role: "system", content: REFINE_SYSTEM_PROMPT },
     { role: "user", content: getRefinementPrompt(originalHtml, userRequest) },
   ];
-  const rawContent = await callOpenRouterApi(messages);
+  const rawContent = await callOpenRouterApi(messages, model, providerId);
   return extractHtmlContent(rawContent);
 }
 

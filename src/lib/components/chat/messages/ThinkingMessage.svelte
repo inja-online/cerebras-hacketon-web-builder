@@ -27,7 +27,6 @@
 </div>
 
 <style>
-    /* Styles specific to ThinkingMessage, using variables from app.css */
     .message-group {
         width: 100%;
         padding: var(--spacing-3) 0;
@@ -85,12 +84,6 @@
         }
     }
 
-    /* Styles for Lucide icon alternative */
-    .animate-spin {
-        animation: spin 1s linear infinite;
-        color: var(--color-foreground-muted);
-    }
-
     @keyframes spin {
         from {
             transform: rotate(0deg);
@@ -98,28 +91,6 @@
         to {
             transform: rotate(360deg);
         }
-    }
-
-    .thinking-dots {
-        display: flex;
-        gap: 4px;
-        align-items: center;
-    }
-
-    .dot {
-        width: 6px;
-        height: 6px;
-        background-color: var(--primary-accent);
-        border-radius: 50%;
-        animation: thinking 1.4s infinite both;
-    }
-
-    .dot:nth-child(2) {
-        animation-delay: 0.2s;
-    }
-
-    .dot:nth-child(3) {
-        animation-delay: 0.4s;
     }
 
     @keyframes thinking {

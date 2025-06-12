@@ -7,15 +7,18 @@
 
     interface Props {
         event: ChatEvent;
+        onDownloadHtmlFromMessage?: (htmlContent: string, messageId: string) => void;
+        onRevertToHtmlFromMessage?: (htmlContent: string) => void;
+        onRetryFromMessage?: (botMessageId: string) => void;
     }
 
-    let { event }: Props = $props();
+    let { event, onDownloadHtmlFromMessage, onRevertToHtmlFromMessage, onRetryFromMessage }: Props = $props();
 </script>
 
 {#if event.type === "user"}
-    <UserMessage {event} />
+    <UserMessage {event} onDownloadHtml={onDownloadHtmlFromMessage} onRevertToHtml={onRevertToHtmlFromMessage} />
 {:else if event.type === "bot"}
-    <BotMessage {event} />
+    <BotMessage {event} onDownloadHtml={onDownloadHtmlFromMessage} onRevertToHtml={onRevertToHtmlFromMessage} onRetryMessage={onRetryFromMessage} />
 {:else if event.type === "server"}
     <ServerMessage {event} />
 {:else if event.type === "thinking"}
