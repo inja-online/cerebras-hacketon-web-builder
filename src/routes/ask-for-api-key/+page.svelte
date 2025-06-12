@@ -3,8 +3,15 @@
 	import { settingsStorage } from '$lib/storage'; // Import settingsStorage
 	import { goto } from '$app/navigation'; // Import goto
 
-	let apiKey = '';
+	// svelte-ignore non_reactive_update
+		let apiKey = '';
 	const apiKeyStorageKey = 'openrouter_api_key'; // Key for IndexedDB
+
+	let checkingConnection = $state(false);
+	let connectionStatus = $state<'idle' | 'success' | 'error' | 'checking'>('idle');
+	let availableModels = $state<any[]>([]);
+	let modelsError = $state('');
+	let generalMessage = $state(''); // For general success/error messages not related to connection check
 
 	onMount(async () => {
 		const storedKey = await settingsStorage.getSetting<string>(apiKeyStorageKey);
@@ -26,6 +33,41 @@
 			}
 		} else {
 			alert('Please enter a valid API Key.');
+		}
+	}
+
+	async function handleCheckConnectionAndSave() {
+		if (!apiKey.trim()) {
+			generalMessage = 'Please enter a valid API Key.';
+			connectionStatus = 'idle';
+			return;
+		}
+
+		checkingConnection = true;
+		connectionStatus = 'checking';
+		modelsError = '';
+		generalMessage = '';
+		availableModels = [];
+
+		try {
+			const { checkConnectionAndListModels } = await import('$lib/apis/openrouter');
+			const models = await checkConnectionAndListModels(apiKey.trim());
+			availableModels = models.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
+			connectionStatus = 'success';
+
+			// If connection is successful, then save the API key
+			await settingsStorage.setSetting(apiKeyStorageKey, apiKey.trim());
+			generalMessage = 'API Key is valid and saved successfully!';
+			setTimeout(() => {
+				goto('/', { replaceState: true }); // Redirect after saving and successful check
+			}, 2000); 
+
+		} catch (error: any) {
+			console.error('Failed to check connection or save API key:', error);
+			modelsError = error.message || 'An unknown error occurred.';
+			connectionStatus = 'error';
+		} finally {
+			checkingConnection = false;
 		}
 	}
 </script>
@@ -71,11 +113,45 @@
 				/>
 			</div>
 
+			{#if generalMessage}
+				<p class="text-sm text-center px-2 py-2 rounded-md" 
+				   class:text-green-300={connectionStatus === 'success' || generalMessage.includes('success')}
+				   class:bg-green-900={connectionStatus === 'success' || generalMessage.includes('success')}
+				   class:border-green-700={connectionStatus === 'success' || generalMessage.includes('success')}
+				   class:text-red-300={connectionStatus === 'error' || !generalMessage.includes('success')}
+				   class:bg-red-900={connectionStatus === 'error' || !generalMessage.includes('success')}
+				   class:border-red-700={connectionStatus === 'error' || !generalMessage.includes('success')}
+				>
+					{generalMessage}
+				</p>
+			{/if}
+
+			{#if connectionStatus === 'checking'}
+				<div class="text-center text-sm text-zinc-300 py-2">
+					<p class="animate-pulse">Checking connection and API key validity...</p>
+				</div>
+			{:else if connectionStatus === 'success' && availableModels.length > 0}
+				<div class="bg-zinc-800 border border-zinc-700 rounded-lg p-4 max-h-60 overflow-y-auto">
+					<h3 class="text-md font-medium text-green-300 mb-2">Accessible Models:</h3>
+					<ul class="list-disc list-inside text-xs text-zinc-300 space-y-1">
+						{#each availableModels as model (model.id)}
+							<li>{model.name || model.id}</li>
+						{/each}
+					</ul>
+				</div>
+			{:else if connectionStatus === 'error'}
+				<div class="bg-red-900/50 border border-red-700 rounded-lg p-3 text-center">
+					<p class="text-sm text-red-300">{modelsError}</p>
+				</div>
+			{/if}
+
 			<button
-				type="submit"
-				class="w-full px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-zinc-800 transition-colors duration-200"
+				type="button" 
+				onclick={handleCheckConnectionAndSave}
+				class="w-full px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-zinc-800 transition-colors duration-200 disabled:bg-zinc-700 disabled:text-zinc-400 disabled:cursor-not-allowed"
+				disabled={checkingConnection || !apiKey.trim()}
 			>
-				Save API Key
+				{checkingConnection ? 'Checking & Saving...' : 'Check Connection & Save API Key'}
 			</button>
 		</form>
 	</div>

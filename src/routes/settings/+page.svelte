@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { settingsStorage, projectStorage, chatEventStorage } from '$lib/storage';
 	import { goto } from '$app/navigation';
+	import { Eye, EyeOff } from '@lucide/svelte';
 
 	let apiKey = $state('');
 	let originalApiKey = $state('');
@@ -9,7 +10,12 @@
 	let successMessage = $state('');
 	let errorMessage = $state('');
 	let fileInput: HTMLInputElement;
+	let showApiKey = $state(false);
 	const apiKeyStorageKey = 'openrouter_api_key';
+
+	let checkingConnection = $state(false);
+	let connectionStatus = $state<'idle' | 'success' | 'error'>('idle');
+	let modelsError = $state('');
 
 	const hasChanges = $derived(apiKey.trim() !== originalApiKey);
 
@@ -256,6 +262,58 @@
 	function goBack() {
 		history.back();
 	}
+
+	async function handleCheckConnection() {
+		if (!apiKey.trim()) {
+			modelsError = 'Please enter an API Key to check the connection.';
+			connectionStatus = 'error';
+			successMessage = '';
+			errorMessage = '';
+			return;
+		}
+		checkingConnection = true;
+		connectionStatus = 'idle';
+		modelsError = '';
+		successMessage = '';
+		errorMessage = '';
+
+		try {
+			// Create a temporary function that uses the provided API key
+			const testApiCall = async () => {
+				const headers = {
+					Authorization: `Bearer ${apiKey.trim()}`,
+					"Content-Type": "application/json",
+				};
+
+				const body = {
+					model: "meta-llama/llama-3.1-8b-instruct",
+					messages: [{ role: "user", content: "Hello" }],
+				};
+
+				const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+					method: "POST",
+					headers,
+					body: JSON.stringify(body),
+				});
+
+				if (!response.ok) {
+					const errorBody = await response.text();
+					throw new Error(`HTTP error! status: ${response.status}, message: ${errorBody}`);
+				}
+
+				return await response.json();
+			};
+
+			await testApiCall();
+			connectionStatus = 'success';
+		} catch (error: any) {
+			console.error('Failed to check connection:', error);
+			modelsError = error.message || 'An unknown error occurred while checking the connection.';
+			connectionStatus = 'error';
+		} finally {
+			checkingConnection = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -321,13 +379,27 @@
 						<label for="apiKey" class="block text-sm font-medium text-zinc-300 mb-2">
 							API Key
 						</label>
-						<input
-							type="password"
-							id="apiKey"
-							bind:value={apiKey}
-							placeholder="sk-or-..."
-							class="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-md focus:ring-2 focus:ring-primary-accent focus:border-primary-accent outline-none transition-colors duration-200 text-zinc-100 placeholder-zinc-400"
-						/>
+						<div class="relative">
+							<input
+								type={showApiKey ? "text" : "password"}
+								id="apiKey"
+								bind:value={apiKey}
+								placeholder="sk-or-..."
+								class="w-full px-4 py-2.5 pr-12 bg-zinc-800 border border-zinc-700 rounded-md focus:ring-2 focus:ring-primary-accent focus:border-primary-accent outline-none transition-colors duration-200 text-zinc-100 placeholder-zinc-400"
+							/>
+							<button
+								type="button"
+								onclick={() => showApiKey = !showApiKey}
+								class="absolute right-3 top-1/2 transform -translate-y-1/2 text-zinc-400 hover:text-zinc-300 transition-colors duration-200"
+								title={showApiKey ? "Hide API key" : "Show API key"}
+							>
+								{#if showApiKey}
+									<EyeOff size={18} />
+								{:else}
+									<Eye size={18} />
+								{/if}
+							</button>
+						</div>
 					</div>
 
 					<!-- Action Buttons -->
@@ -349,8 +421,31 @@
 								Delete API Key
 							</button>
 						{/if}
+						<button
+							onclick={handleCheckConnection}
+							disabled={isLoading || checkingConnection || !apiKey.trim()}
+							class="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-medium rounded-md transition-colors duration-200 disabled:cursor-not-allowed"
+						>
+							{checkingConnection ? 'Checking...' : 'Check Connection'}
+						</button>
 					</div>
 				</div>
+
+				<!-- Connection Status -->
+				{#if checkingConnection && connectionStatus === 'idle'}
+					<div class="bg-zinc-800 border border-zinc-700 rounded-lg p-4">
+						<p class="text-zinc-300 text-sm animate-pulse">Checking connection to OpenRouter...</p>
+					</div>
+				{:else if connectionStatus === 'success'}
+					<div class="bg-green-900/50 border border-green-700 rounded-lg p-4">
+						<p class="text-green-300 text-sm font-medium">Connection to OpenRouter is successful!</p>
+					</div>
+				{:else if connectionStatus === 'error'}
+					<div class="bg-red-900/50 border border-red-700 rounded-lg p-4">
+						<p class="text-red-300 text-sm font-medium">Connection Failed</p>
+						<p class="text-red-300 text-xs mt-1">{modelsError}</p>
+					</div>
+				{/if}
 			</div>
 
 			<!-- Data Management Section -->
