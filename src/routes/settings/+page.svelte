@@ -286,7 +286,7 @@
 				};
 
 				const body = {
-					model: "meta-llama/llama-3.1-8b-instruct",
+					model: "qwen/qwen3-32b",
 					messages: [{ role: "user", content: "Hello" }],
 				};
 
