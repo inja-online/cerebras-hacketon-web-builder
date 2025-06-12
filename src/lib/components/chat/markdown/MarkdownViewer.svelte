@@ -101,7 +101,7 @@
 	let processedMessage = $derived(processThinkBlocks(message?.content || ''));
 </script>
 
-<div class="markdown-container" on:copy={doCopyFromText}>
+<div class="markdown-container" oncopy={doCopyFromText}>
 	<div class="markdown-content" dir="auto">
 
 		<Markdown md={processedMessage.mainContent} {plugins} />

@@ -2,6 +2,8 @@ import Dexie, { type Table } from 'dexie';
 import type { ChatEvent, Project } from './types';
 
 export const apiKeyStorageKey = "openrouter_api_key";
+export const selectedModelKey = "selected_model";
+export const selectedProviderKey = "selected_provider";
 
 
 // Setting interface
@@ -35,6 +37,12 @@ class AppDB extends Dexie implements AppDatabase {
       chatEvents: 'id, type, timestamp, userId, projectId, [projectId+timestamp]',
       projects: 'id, name, createdAt, updatedAt, isPrivate',
       settings: '&key' // '&key' makes 'key' the primary key and ensures it's unique.
+    });
+    // Add new version for model and provider in chatEvents
+    this.version(3).stores({
+      chatEvents: 'id, type, timestamp, userId, projectId, [projectId+timestamp], model, provider', // Added model and provider
+      projects: 'id, name, createdAt, updatedAt, isPrivate',
+      settings: '&key'
     });
   }
 }

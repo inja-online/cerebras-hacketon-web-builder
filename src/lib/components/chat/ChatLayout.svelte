@@ -5,37 +5,51 @@
 
 	let message = $state("");
 	// Changed events to be an input prop with a default value
-	let { events = [
-		{
-			id: "1",
-			type: "server",
-			content: "Welcome to inja.online! How can we help you today?",
-			timestamp: new Date()
-		}
-	] }: { events?: ChatEvent[] } = $props();
+	let {
+		events = [
+			{
+				id: "1",
+				type: "server",
+				content: "Welcome to inja.online! How can we help you today?",
+				timestamp: new Date(),
+			},
+		],
+
+		onDownloadHtmlFromMessage,
+		onRevertToHtmlFromMessage,
+		onRetryFromMessage,
+	}: {
+		events?: ChatEvent[];
+		onDownloadHtmlFromMessage?: (
+			htmlContent: string,
+			messageId: string,
+		) => void;
+		onRevertToHtmlFromMessage?: (htmlContent: string) => void;
+		onRetryFromMessage?: (botMessageId: string) => void;
+	} = $props();
 
 	function handleSendMessage() {
-        console.log("Sending message:", message);
+		console.log("Sending message:", message);
 		if (!message.trim()) return;
-		
+
 		const userMessage: ChatEvent = {
 			id: Date.now().toString(),
 			type: "user",
 			userId: "user",
 			content: message.trim(),
-			timestamp: new Date()
+			timestamp: new Date(),
 		};
-		
+
 		events = [...events, userMessage];
 		message = "";
-		
+
 		// Simulate bot response
 		setTimeout(() => {
 			const botMessage: ChatEvent = {
 				id: (Date.now() + 1).toString(),
 				type: "bot",
 				content: "Thanks for your message! This is a demo response.",
-				timestamp: new Date()
+				timestamp: new Date(),
 			};
 			events = [...events, botMessage];
 		}, 1000);
@@ -51,6 +65,8 @@
 
 <div class="flex-1 bg-dark-secondary flex flex-col h-full">
 	<!-- Chat Messages -->
-	<ChatMessages {events} />
-	
+	<ChatMessages {events} 
+		onDownloadHtmlFromMessage={onDownloadHtmlFromMessage}
+		onRevertToHtmlFromMessage={onRevertToHtmlFromMessage} 
+		onRetryFromMessage={onRetryFromMessage} />
 </div>
