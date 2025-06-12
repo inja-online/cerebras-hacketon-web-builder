@@ -2,16 +2,16 @@
 	import { onMount } from 'svelte';
 	import { settingsStorage } from '$lib/storage'; // Import settingsStorage
 	import { goto } from '$app/navigation'; // Import goto
+	import { Eye, EyeOff } from '@lucide/svelte';
 
-	// svelte-ignore non_reactive_update
-		let apiKey = '';
+	let apiKey = $state('');
 	const apiKeyStorageKey = 'openrouter_api_key'; // Key for IndexedDB
 
 	let checkingConnection = $state(false);
-	let connectionStatus = $state<'idle' | 'success' | 'error' | 'checking'>('idle');
-	let availableModels = $state<any[]>([]);
+	let connectionStatus = $state<'idle' | 'success' | 'error'>('idle');
 	let modelsError = $state('');
 	let generalMessage = $state(''); // For general success/error messages not related to connection check
+	let showApiKey = $state(false);
 
 	onMount(async () => {
 		const storedKey = await settingsStorage.getSetting<string>(apiKeyStorageKey);
@@ -39,20 +39,43 @@
 	async function handleCheckConnectionAndSave() {
 		if (!apiKey.trim()) {
 			generalMessage = 'Please enter a valid API Key.';
-			connectionStatus = 'idle';
+			connectionStatus = 'error';
 			return;
 		}
 
 		checkingConnection = true;
-		connectionStatus = 'checking';
+		connectionStatus = 'idle';
 		modelsError = '';
 		generalMessage = '';
-		availableModels = [];
 
 		try {
-			const { checkConnectionAndListModels } = await import('$lib/apis/openrouter');
-			const models = await checkConnectionAndListModels(apiKey.trim());
-			availableModels = models.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
+			// Create a temporary function that uses the provided API key
+			const testApiCall = async () => {
+				const headers = {
+					Authorization: `Bearer ${apiKey.trim()}`,
+					"Content-Type": "application/json",
+				};
+
+				const body = {
+					model: "qwen/qwen3-32b",
+					messages: [{ role: "user", content: "Hello" }],
+				};
+
+				const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+					method: "POST",
+					headers,
+					body: JSON.stringify(body),
+				});
+
+				if (!response.ok) {
+					const errorBody = await response.text();
+					throw new Error(`HTTP error! status: ${response.status}, message: ${errorBody}`);
+				}
+
+				return await response.json();
+			};
+
+			await testApiCall();
 			connectionStatus = 'success';
 
 			// If connection is successful, then save the API key
@@ -64,7 +87,7 @@
 
 		} catch (error: any) {
 			console.error('Failed to check connection or save API key:', error);
-			modelsError = error.message || 'An unknown error occurred.';
+			modelsError = error.message || 'An unknown error occurred while checking the connection.';
 			connectionStatus = 'error';
 		} finally {
 			checkingConnection = false;
@@ -97,20 +120,34 @@
 			</p>
 		</section>
 
-		<form onsubmit={saveApiKey} class="space-y-8">
+		<form onsubmit={(e) => { e.preventDefault(); if (apiKey.trim()) handleCheckConnectionAndSave(); }} class="space-y-8">
 			<div>
 				<label for="apiKey" class="block text-sm font-medium text-zinc-300 mb-2">
 					OpenRouter API Key
 				</label>
-				<input
-					type="password"
-					id="apiKey"
-					name="apiKey"
-					bind:value={apiKey}
-					placeholder="sk-or-..."
-					class="w-full px-4 py-2.5 bg-zinc-700 border border-zinc-600 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-colors duration-200 text-zinc-100 placeholder-zinc-400"
-					required
-				/>
+				<div class="relative">
+					<input
+						type={showApiKey ? "text" : "password"}
+						id="apiKey"
+						name="apiKey"
+						bind:value={apiKey}
+						placeholder="sk-or-..."
+						class="w-full px-4 py-2.5 pr-12 bg-zinc-700 border border-zinc-600 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-colors duration-200 text-zinc-100 placeholder-zinc-400"
+						required
+					/>
+					<button
+						type="button"
+						onclick={() => showApiKey = !showApiKey}
+						class="absolute right-3 top-1/2 transform -translate-y-1/2 text-zinc-400 hover:text-zinc-300 transition-colors duration-200"
+						title={showApiKey ? "Hide API key" : "Show API key"}
+					>
+						{#if showApiKey}
+							<EyeOff size={18} />
+						{:else}
+							<Eye size={18} />
+						{/if}
+					</button>
+				</div>
 			</div>
 
 			{#if generalMessage}
@@ -126,28 +163,23 @@
 				</p>
 			{/if}
 
-			{#if connectionStatus === 'checking'}
-				<div class="text-center text-sm text-zinc-300 py-2">
-					<p class="animate-pulse">Checking connection and API key validity...</p>
+			{#if checkingConnection && connectionStatus === 'idle'}
+				<div class="bg-zinc-800 border border-zinc-700 rounded-lg p-4">
+					<p class="text-zinc-300 text-sm animate-pulse text-center">Checking connection to OpenRouter...</p>
 				</div>
-			{:else if connectionStatus === 'success' && availableModels.length > 0}
-				<div class="bg-zinc-800 border border-zinc-700 rounded-lg p-4 max-h-60 overflow-y-auto">
-					<h3 class="text-md font-medium text-green-300 mb-2">Accessible Models:</h3>
-					<ul class="list-disc list-inside text-xs text-zinc-300 space-y-1">
-						{#each availableModels as model (model.id)}
-							<li>{model.name || model.id}</li>
-						{/each}
-					</ul>
+			{:else if connectionStatus === 'success' && !generalMessage.includes('success')}
+				<div class="bg-green-900/50 border border-green-700 rounded-lg p-4">
+					<p class="text-green-300 text-sm font-medium text-center">Connection to OpenRouter is successful!</p>
 				</div>
-			{:else if connectionStatus === 'error'}
-				<div class="bg-red-900/50 border border-red-700 rounded-lg p-3 text-center">
-					<p class="text-sm text-red-300">{modelsError}</p>
+			{:else if connectionStatus === 'error' && modelsError}
+				<div class="bg-red-900/50 border border-red-700 rounded-lg p-4">
+					<p class="text-red-300 text-sm font-medium text-center">Connection Failed</p>
+					<p class="text-red-300 text-xs mt-1 text-center">{modelsError}</p>
 				</div>
 			{/if}
 
 			<button
-				type="button" 
-				onclick={handleCheckConnectionAndSave}
+				type="submit" 
 				class="w-full px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-zinc-800 transition-colors duration-200 disabled:bg-zinc-700 disabled:text-zinc-400 disabled:cursor-not-allowed"
 				disabled={checkingConnection || !apiKey.trim()}
 			>
