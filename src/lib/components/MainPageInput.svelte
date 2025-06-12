@@ -62,7 +62,7 @@
         // Reset the optimization highlight after a moment
         setTimeout(() => {
             hasOptimized = false;
-        }, 2000);
+        }, 100);
     }
 </script>
 

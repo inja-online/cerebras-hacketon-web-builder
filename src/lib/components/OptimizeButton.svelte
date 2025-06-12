@@ -29,7 +29,7 @@
             const optimizedText = await optimizePrompt(originalText, currentContextText);
             
             // Add a small delay to ensure user sees the completion of the animation
-            await new Promise(resolve => setTimeout(resolve, 300));
+            await new Promise(resolve => setTimeout(resolve, 100));
             
             // Call the callback with optimized text
             if (onOptimized) {
@@ -41,7 +41,7 @@
             // Reset the optimization highlight after a moment
             setTimeout(() => {
                 hasOptimized = false;
-            }, 2000);
+            }, 100);
             
         } catch (error) {
             console.error("Failed to optimize prompt:", error);
