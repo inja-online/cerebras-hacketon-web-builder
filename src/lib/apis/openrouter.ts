@@ -5,6 +5,7 @@ import {
   getRefinementPrompt,
   REFINE_SYSTEM_PROMPT,
   GET_TITLE_PROMPT,
+  OPTIMIZE_PROMPT_SYSTEM,
 } from "./prompts";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -152,6 +153,7 @@ export async function refinePage(
   return extractHtmlContent(rawContent);
 }
 
+
 export async function checkConnectionAndListModels(apiKeyOverride?: string): Promise<Model[]> {
   const apiKey = apiKeyOverride || await getApiKey();
   const headers = {
@@ -194,4 +196,25 @@ export async function checkConnectionAndListModels(apiKeyOverride?: string): Pro
     console.error("Error fetching models from OpenRouter API:", error);
     throw error; // Re-throw to be handled by the caller
   }
+}
+
+async function getOptimizerModel(): Promise<string> {
+  const stored = await settingsStorage.getSetting<string>('optimizer_model');
+  return stored || 'meta-llama/llama-3.1-8b-instruct';
+}
+
+export async function optimizePrompt(userPrompt: string, contextPrompt?: string): Promise<string> {
+  const messages: ChatMessage[] = [
+    { role: "system", content: OPTIMIZE_PROMPT_SYSTEM },
+  ];
+
+  if (contextPrompt && contextPrompt.trim()) {
+    messages.push({ role: "user", content: `Original project idea for context: "${contextPrompt.trim()}"` });
+    messages.push({ role: "user", content: `Refine this specific part: "${userPrompt.trim()}"` });
+  } else {
+    messages.push({ role: "user", content: userPrompt.trim() });
+  }
+  const optimizerModel = await getOptimizerModel();
+  const rawContent = await callOpenRouterApi(messages, optimizerModel);
+  return rawContent.trim();
 }

@@ -16,7 +16,8 @@ interface ChatCompletionResponse {
 }
 
 export async function getChatCompletion(
-    chatHistory: ChatMessage[]
+    chatHistory: ChatMessage[],
+    model: string = 'meta-llama/llama-4-scout'
 ): Promise<ChatCompletionResponse> {
     const url = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -31,10 +32,7 @@ export async function getChatCompletion(
     };
 
     const data = {
-        model: 'qwen/qwen3-32b',
-        provider: {
-            only: ['Cerebras']
-        },
+        model,
         messages
     };
 

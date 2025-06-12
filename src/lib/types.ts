@@ -61,6 +61,7 @@ export interface Project {
   id: string;
   name: string;
   description: string;
+  htmlContent?: string;
   isPrivate: boolean;
   createdAt: Date;
   updatedAt: Date;

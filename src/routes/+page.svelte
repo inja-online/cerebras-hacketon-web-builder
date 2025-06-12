@@ -2,7 +2,7 @@
     import { onMount } from "svelte";
     import { goto } from "$app/navigation";
     import { apiKeyStorageKey, settingsStorage } from "$lib/storage";
-    import { Settings } from "@lucide/svelte";
+    import { Settings, SettingsIcon, BookOpen } from "@lucide/svelte";
     import MainPageInput from "$lib/components/MainPageInput.svelte";
     import RecentProjects from "$lib/components/RecentProjects.svelte";
     let apiKeyPresent = $state(false);
@@ -30,18 +30,20 @@
             >
             <div class="flex items-center space-x-4">
                 <a
+                    class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-full text-primary-accent hover:bg-zinc-800 hover:border-primary-accent hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-accent transition-all duration-200 shadow-sm group animate-bounce-slow"
+                    title="Learn more about how we built this"
                     href="https://mamad.dev/en/blog/builder-inja-online"
-                    class="text-sm text-primary-accent hover:text-white transition-colors duration-200"
                 >
-                    read the blog on how we build this
+                    <BookOpen size={18} class="transition-colors duration-200 group-hover:text-white" />
+                    <span class="text-sm font-medium tracking-wide">Learn More</span>
                 </a>
-                <a
-                    href="/settings"
-                    class="text-sm text-zinc-400 hover:text-white transition-colors duration-200 flex items-center gap-2"
+                <a href="/settings"
+                    class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-full text-primary-accent hover:bg-zinc-800 hover:border-primary-accent hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-accent transition-all duration-200 shadow-sm group"
+                    title="Settings"
                 >
-                    <Settings size={16} />
-                    Settings
-                </a>
+			        <SettingsIcon size={18} class="transition-colors duration-200 group-hover:text-white" />
+			        <span class="text-sm font-medium tracking-wide hidden sm:inline">Settings</span>
+		        </a>
             </div>
         </div>
 
@@ -72,3 +74,13 @@
         <p class="text-zinc-400">Checking API Key...</p>
     {/if}
 </div>
+
+<style>
+	@keyframes bounce-slow {
+		0%, 100% { transform: translateY(0); }
+		50% { transform: translateY(-6px); }
+	}
+	.animate-bounce-slow {
+		animation: bounce-slow 2.2s infinite;
+	}
+</style>

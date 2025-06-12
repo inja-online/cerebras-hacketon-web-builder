@@ -1,7 +1,8 @@
 <script lang="ts">
 	import '../app.css';
-	
 	let { children } = $props();
 </script>
 
-{@render children()}
+<div class="relative min-h-screen">
+	{@render children()}
+</div>

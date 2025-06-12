@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { settingsStorage, projectStorage, chatEventStorage } from '$lib/storage';
 	import { goto } from '$app/navigation';
-	import { Eye, EyeOff } from '@lucide/svelte';
+	import { Eye, EyeOff, ArrowLeft } from '@lucide/svelte';
 
 	let apiKey = $state('');
 	let originalApiKey = $state('');
@@ -314,6 +314,65 @@
 			checkingConnection = false;
 		}
 	}
+
+	let optimizerModel = $state('meta-llama/llama-3.1-8b-instruct');
+	let originalOptimizerModel = $state('meta-llama/llama-3.1-8b-instruct');
+	const optimizerModelStorageKey = 'optimizer_model';
+
+	const optimizerModels = [
+	{
+		id: 'meta-llama/llama-3.1-8b-instruct',
+		label: 'Meta: Llama 3.1 8B Instruct',
+		desc: 'Fast, efficient. 131K ctx.'
+	},
+	{
+		id: 'qwen/qwen3-32b',
+		label: 'Qwen: Qwen3 32B',
+		desc: 'Dense 32.8B, 131K ctx.'
+	},
+	{
+		id: 'meta-llama/llama-4-scout',
+		label: 'Meta: Llama 4 Scout',
+		desc: '17B MoE, 10M ctx.'
+	},
+	{
+		id: 'deepseek/deepseek-r1-distill-llama-70b',
+		label: 'DeepSeek: R1 Distill Llama 70B',
+		desc: 'Distilled 70B, 128K ctx.'
+	},
+	{
+		id: 'meta-llama/llama-3.3-70b-instruct',
+		label: 'Meta: Llama 3.3 70B Instruct',
+		desc: 'Multilingual, 131K ctx.'
+	}
+];
+
+onMount(async () => {
+	const storedOptimizerModel = await settingsStorage.getSetting<string>(optimizerModelStorageKey);
+	if (storedOptimizerModel) {
+		optimizerModel = storedOptimizerModel;
+		originalOptimizerModel = storedOptimizerModel;
+	}
+});
+
+const hasOptimizerModelChanges = $derived(optimizerModel !== originalOptimizerModel);
+
+async function saveOptimizerModel() {
+	isLoading = true;
+	errorMessage = '';
+	successMessage = '';
+	try {
+		await settingsStorage.setSetting(optimizerModelStorageKey, optimizerModel);
+		originalOptimizerModel = optimizerModel;
+		successMessage = 'Optimizer model saved!';
+		setTimeout(() => { successMessage = ''; }, 2000);
+	} catch (error) {
+		console.error('Failed to save optimizer model:', error);
+		errorMessage = 'Failed to save optimizer model.';
+	} finally {
+		isLoading = false;
+	}
+}
 </script>
 
 <svelte:head>
@@ -326,11 +385,14 @@
 		<a href="https://inja.online" target="_blank" class="text-2xl font-medium text-primary-accent tracking-wide">
 			INJA.ONLINE
 		</a>
+		<!-- Improved Back Button -->
 		<button
-			class="text-sm text-primary-accent hover:text-white transition-colors duration-200"
 			onclick={goBack}
+			class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-full text-primary-accent hover:bg-zinc-800 hover:border-primary-accent hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-accent transition-all duration-200 shadow-sm group"
+			title="Back"
 		>
-			← back
+			<ArrowLeft size={18} class="transition-colors duration-200 group-hover:text-white" />
+			<span class="text-sm font-medium tracking-wide">Back</span>
 		</button>
 	</div>
 
@@ -446,6 +508,25 @@
 						<p class="text-red-300 text-xs mt-1">{modelsError}</p>
 					</div>
 				{/if}
+			</div>
+
+			<!-- Optimizer Model Selection -->
+			<div class="bg-zinc-900 border border-zinc-800 rounded-lg p-6 space-y-6">
+				<h3 class="text-xl font-medium text-white mb-2">Optimizer Model</h3>
+				<p class="text-text-muted text-sm mb-4">Choose which model to use for prompt optimization. Default is Meta: Llama 3.1 8B Instruct.</p>
+				<div class="space-y-4">
+					<label for="optimizerModel" class="block text-sm font-medium text-zinc-300 mb-2">Optimizer Model</label>
+					<select id="optimizerModel" bind:value={optimizerModel} class="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-md focus:ring-2 focus:ring-primary-accent focus:border-primary-accent outline-none transition-colors duration-200 text-zinc-100">
+						{#each optimizerModels as model}
+							<option value={model.id}>{model.label} — {model.desc}</option>
+						{/each}
+					</select>
+					<div class="flex space-x-3">
+						<button onclick={saveOptimizerModel} disabled={!hasOptimizerModelChanges || isLoading} class="px-4 py-2 bg-primary-accent hover:bg-zinc-600 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-medium rounded-md transition-colors duration-200 disabled:cursor-not-allowed">
+							{isLoading ? 'Saving...' : 'Save Optimizer Model'}
+						</button>
+					</div>
+				</div>
 			</div>
 
 			<!-- Data Management Section -->
