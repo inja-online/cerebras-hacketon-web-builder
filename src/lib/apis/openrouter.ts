@@ -188,6 +188,11 @@ export async function checkConnectionAndListModels(apiKeyOverride?: string): Pro
   }
 }
 
+async function getOptimizerModel(): Promise<string> {
+  const stored = await settingsStorage.getSetting<string>('optimizer_model');
+  return stored || 'meta-llama/llama-3.1-8b-instruct';
+}
+
 export async function optimizePrompt(userPrompt: string, contextPrompt?: string): Promise<string> {
   const messages: ChatMessage[] = [
     { role: "system", content: OPTIMIZE_PROMPT_SYSTEM },
@@ -199,7 +204,7 @@ export async function optimizePrompt(userPrompt: string, contextPrompt?: string)
   } else {
     messages.push({ role: "user", content: userPrompt.trim() });
   }
-  
-  const rawContent = await callOpenRouterApi(messages, "meta-llama/llama-3.1-8b-instruct"); // Using a generally good model for this
+  const optimizerModel = await getOptimizerModel();
+  const rawContent = await callOpenRouterApi(messages, optimizerModel);
   return rawContent.trim();
 }
