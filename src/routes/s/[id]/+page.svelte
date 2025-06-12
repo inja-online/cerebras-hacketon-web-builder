@@ -57,7 +57,6 @@
     // Add a new state for the API key modal message, distinct from general errorMessage
     let apiKeyErrorMessage = $state("");
 
-
     const projectId = $page.params.id;
     const userId = "user-1";
 
@@ -395,12 +394,11 @@
                 "Auto-generating initial page based on your prompt...",
             );
             scrollToBottom();
-            const newHtmlContent =
-                await createInitialPage(
-                    initialPromptContent,
-                    currentModel,
-                    currentProvider,
-                );
+            const newHtmlContent = await createInitialPage(
+                initialPromptContent,
+                currentModel,
+                currentProvider,
+            );
             await storeAndReplaceThinkingWithBotMessage(
                 thinkingId,
                 newHtmlContent,
@@ -471,7 +469,9 @@
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
         // Sanitize messageId for use in filename, or use a generic name
-        const safeName = currentProject?.name ? currentProject.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() : "project";
+        const safeName = currentProject?.name
+            ? currentProject.name.replace(/[^a-z0-9]/gi, "_").toLowerCase()
+            : "project";
         link.download = `${safeName}-version-${messageId.substring(0, 8)}.html`;
         document.body.appendChild(link);
         link.click();
@@ -495,7 +495,9 @@
         if (isLoading) return;
         if (!(await checkApiKey())) return;
 
-        const botMessageIndex = messages.findIndex(msg => msg.id === botMessageId && msg.type === 'bot');
+        const botMessageIndex = messages.findIndex(
+            (msg) => msg.id === botMessageId && msg.type === "bot",
+        );
         if (botMessageIndex === -1) {
             addServerMessage("Error: Could not find the message to retry.");
             return;
@@ -506,23 +508,27 @@
         let userMessageForRetry: UserChatEvent | null = null;
         for (let i = botMessageIndex - 1; i >= 0; i--) {
             const prevMessage = messages[i];
-            if (prevMessage.type === 'user') {
+            if (prevMessage.type === "user") {
                 userMessageForRetry = prevMessage as UserChatEvent;
                 break;
             }
             // If we hit another bot message before a user message, something is off, or it's a complex sequence.
             // For now, we assume a User -> (Thinking) -> Bot sequence for retries.
-            if (prevMessage.type === 'bot') break; 
+            if (prevMessage.type === "bot") break;
         }
 
         if (!userMessageForRetry) {
-            addServerMessage("Error: Could not find the original user prompt for this message.");
+            addServerMessage(
+                "Error: Could not find the original user prompt for this message.",
+            );
             return;
         }
 
         const userPromptContent = userMessageForRetry.content;
 
-        addServerMessage(`Retrying generation based on: "${userPromptContent.substring(0, 50)}..."`);
+        addServerMessage(
+            `Retrying generation based on: "${userPromptContent.substring(0, 50)}..."`,
+        );
         scrollToBottom();
 
         isLoading = true;
@@ -535,17 +541,20 @@
             // This assumes the retry should behave like the original attempt in terms of refine vs create.
             const hasExistingContent =
                 generatedHtml &&
-                generatedHtml.trim() !== "<!-- Start by typing a command to create your page. -->" &&
+                generatedHtml.trim() !==
+                    "<!-- Start by typing a command to create your page. -->" &&
                 generatedHtml.trim() !== "";
 
             // Also consider if the original user prompt was a refinement instruction
-            const wasRefinementInstruction = userPromptContent.toLowerCase().startsWith("refine:");
-            
+            const wasRefinementInstruction = userPromptContent
+                .toLowerCase()
+                .startsWith("refine:");
+
             // If there's existing HTML or the original prompt was explicitly a refinement.
             if (hasExistingContent || wasRefinementInstruction) {
-                 // If it was a refinement instruction, strip the "Refine: " prefix for the API call
-                const actualInstruction = wasRefinementInstruction 
-                    ? userPromptContent.substring("refine:".length).trim() 
+                // If it was a refinement instruction, strip the "Refine: " prefix for the API call
+                const actualInstruction = wasRefinementInstruction
+                    ? userPromptContent.substring("refine:".length).trim()
                     : userPromptContent;
 
                 newHtmlContent = await refinePage(
@@ -573,7 +582,9 @@
             }
         } catch (error: any) {
             messages = messages.filter((msg) => msg.id !== thinkingId); // Remove thinking message on error
-            const errorMsg = error.message || "Failed to process retry request. Please try again.";
+            const errorMsg =
+                error.message ||
+                "Failed to process retry request. Please try again.";
             addServerMessage(`Error retrying: ${errorMsg}`);
             console.error("API retry request error:", error);
         } finally {
@@ -582,14 +593,15 @@
         }
     }
 
-
     onMount(async () => {
         if (!(await checkApiKey())) {
             // API key not present, modal shown by checkApiKey
         }
 
-        const storedModel = await settingsStorage.getSetting<string>(selectedModelKey);
-        const storedProvider = await settingsStorage.getSetting<string>(selectedProviderKey);
+        const storedModel =
+            await settingsStorage.getSetting<string>(selectedModelKey);
+        const storedProvider =
+            await settingsStorage.getSetting<string>(selectedProviderKey);
 
         if (storedModel) currentModel = storedModel;
         if (storedProvider) currentProvider = storedProvider;
@@ -598,9 +610,11 @@
             await settingsStorage.setSetting(selectedModelKey, currentModel);
         }
         if (!storedProvider) {
-            await settingsStorage.setSetting(selectedProviderKey, currentProvider);
+            await settingsStorage.setSetting(
+                selectedProviderKey,
+                currentProvider,
+            );
         }
-
 
         const loadedProject = await projectStorage.get(projectId);
         if (loadedProject) {
@@ -686,20 +700,24 @@
         // Re-fetch from storage if ModelSelection changes it.
         // This can be improved with a more direct state management or event.
         async function updateModelFromSettings() {
-            const model = await settingsStorage.getSetting<string>(selectedModelKey);
-            const provider = await settingsStorage.getSetting<string>(selectedProviderKey);
+            const model =
+                await settingsStorage.getSetting<string>(selectedModelKey);
+            const provider =
+                await settingsStorage.getSetting<string>(selectedProviderKey);
             if (model && model !== currentModel) currentModel = model;
-            if (provider && provider !== currentProvider) currentProvider = provider;
+            if (provider && provider !== currentProvider)
+                currentProvider = provider;
         }
         // Call it if you expect settings to change from another component not via direct binding
         // For now, ModelSelection's $effect handles saving. This page reads onMount.
         // If ModelSelection is used with bind:value, this $effect might not be strictly needed for model updates.
     });
-
 </script>
 
 <svelte:head>
-    <title>{currentProject ? currentProject.name : "inja.online"} - {currentModel}</title>
+    <title
+        >{currentProject ? currentProject.name : "inja.online"} - {currentModel}</title
+    >
 </svelte:head>
 
 <div class="flex flex-col h-screen bg-zinc-900 text-white">
@@ -806,17 +824,16 @@
         </div>
 
         <!-- Resize Handle -->
-        <div
+        <button
             class="w-1 bg-primary-accent hover:bg-secondary-accent cursor-col-resize flex items-center justify-center group"
             class:bg-secondary-accent={isResizing}
             onmousedown={startResize}
-            role="separator"
             tabindex="0"
         >
             <GripVertical
                 class="w-3 h-6 text-dark-primary group-hover:text-dark-secondary transition-colors"
             />
-        </div>
+        </button>
 
         <!-- Chat Sidebar (Right) -->
         <div class="flex-1 flex flex-col">
@@ -831,15 +848,16 @@
                             : `Chat ${projectId}`}
                     </h1>
                 </div>
-                <div class="w-48"> <!-- Adjust width as needed -->
+                <div class="w-48">
+                    <!-- Adjust width as needed -->
                     <ModelSelection bind:value={currentModel} />
                 </div>
             </header>
 
             <!-- Messages Container -->
             <div bind:this={messagesContainer} class="chat-section">
-                <ChatLayout 
-                    events={messages} 
+                <ChatLayout
+                    events={messages}
                     onDownloadHtmlFromMessage={handleDownloadMessageHtml}
                     onRevertToHtmlFromMessage={handleRevertToVersion}
                     onRetryFromMessage={handleRetryFromMessage}

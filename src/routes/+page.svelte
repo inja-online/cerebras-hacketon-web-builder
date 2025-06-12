@@ -30,7 +30,7 @@
             >
             <div class="flex items-center space-x-4">
                 <a
-                    href="#"
+                    href="https://mamad.dev/en/blog/builder-inja-online"
                     class="text-sm text-primary-accent hover:text-white transition-colors duration-200"
                 >
                     read the blog on how we build this
