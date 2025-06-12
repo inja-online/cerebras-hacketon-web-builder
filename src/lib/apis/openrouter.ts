@@ -200,6 +200,6 @@ export async function optimizePrompt(userPrompt: string, contextPrompt?: string)
     messages.push({ role: "user", content: userPrompt.trim() });
   }
   
-  const rawContent = await callOpenRouterApi(messages, "openai/gpt-3.5-turbo"); // Using a generally good model for this
+  const rawContent = await callOpenRouterApi(messages, "meta-llama/llama-3.1-8b-instruct"); // Using a generally good model for this
   return rawContent.trim();
 }

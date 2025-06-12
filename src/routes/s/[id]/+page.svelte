@@ -621,11 +621,17 @@
                 <!-- Sized Viewport (conditionally gray background, specific width for tablet/mobile) -->
                 <div class="{iframeViewportClasses} flex-grow">
                     <!-- Actual Page Content Wrapper (always white background) -->
-                    <div class="w-full h-full bg-white {
+                    <div class="h-full bg-white {
                         iframeSizeMode === 'tablet' ? 'rounded-md' : 
                         iframeSizeMode === 'mobile' ? 'rounded-lg' : 
                         'rounded-sm' 
-                    } shadow-xl overflow-hidden">
+                    } shadow-xl overflow-hidden"
+                        class:w-[768px]={iframeSizeMode === 'tablet'}
+                        class:w-[375px]={iframeSizeMode === 'mobile'}
+                        class:w-full={iframeSizeMode === 'desktop'}
+                        class:mx-auto={iframeSizeMode !== 'desktop'}
+                        style="height: 100%;"
+                    >
                         {#if generatedHtml && generatedHtml.trim() !== "<!-- Start by typing a command to create your page. -->" && generatedHtml.trim() !== ""}
                             {#key iframeSizeMode}
                                 <iframe
