@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { settingsStorage, projectStorage, chatEventStorage } from '$lib/storage';
 	import { goto } from '$app/navigation';
-	import { Eye, EyeOff } from '@lucide/svelte';
+	import { Eye, EyeOff, ArrowLeft } from '@lucide/svelte';
 
 	let apiKey = $state('');
 	let originalApiKey = $state('');
@@ -385,11 +385,14 @@ async function saveOptimizerModel() {
 		<a href="https://inja.online" target="_blank" class="text-2xl font-medium text-primary-accent tracking-wide">
 			INJA.ONLINE
 		</a>
+		<!-- Improved Back Button -->
 		<button
-			class="text-sm text-primary-accent hover:text-white transition-colors duration-200"
 			onclick={goBack}
+			class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-full text-primary-accent hover:bg-zinc-800 hover:border-primary-accent hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-accent transition-all duration-200 shadow-sm group"
+			title="Back"
 		>
-			← back
+			<ArrowLeft size={18} class="transition-colors duration-200 group-hover:text-white" />
+			<span class="text-sm font-medium tracking-wide">Back</span>
 		</button>
 	</div>
 
