@@ -3,8 +3,10 @@
     import { projectStorage, chatEventStorage } from "$lib/storage";
     import type { UserChatEvent } from "$lib/types";
     import { Send } from "@lucide/svelte";
+    import OptimizeButton from "./OptimizeButton.svelte";
 
-    let prompt = "";
+    let prompt = $state("");
+    let hasOptimized = $state(false);
     const userId = "user-1"; // Consistent with project page
 
     function generateId(): string {
@@ -52,15 +54,36 @@
             await handleSubmit();
         }
     }
+
+    function handleOptimized(optimizedText: string) {
+        prompt = optimizedText;
+        hasOptimized = true;
+        
+        // Reset the optimization highlight after a moment
+        setTimeout(() => {
+            hasOptimized = false;
+        }, 2000);
+    }
 </script>
 
 <div class="space-y-4">
-    <textarea
-        bind:value={prompt}
-        placeholder="Describe your idea..."
-        class="w-full h-24 bg-dark-secondary border border-primary-accent/20 rounded-lg p-4 text-white placeholder-text-muted resize-none focus:outline-none focus:border-primary-accent/40 transition-colors duration-200"
-        onkeydown={handleKeydown}
-    ></textarea>
+    <div class="relative">
+        <textarea
+            bind:value={prompt}
+            placeholder="Describe your idea..."
+            class={`w-full h-32 sm:h-36 lg:h-40 bg-dark-secondary border rounded-lg p-4 pr-12 text-white placeholder-text-muted resize-none focus:outline-none transition-all duration-300 ${
+                hasOptimized 
+                    ? 'border-green-500/60 shadow-lg shadow-green-500/20' 
+                    : 'border-primary-accent/20 focus:border-primary-accent/40'
+            }`}
+            onkeydown={handleKeydown}
+        ></textarea>
+        
+        <!-- Optimize Button -->
+        <div class="absolute right-3 top-3">
+            <OptimizeButton text={prompt} onOptimized={handleOptimized} />
+        </div>
+    </div>
 
     <div class="flex justify-end">
         <button class="button" onclick={handleSubmit} disabled={!prompt.trim()}>

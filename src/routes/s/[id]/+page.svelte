@@ -25,6 +25,7 @@
     } from "$lib/types.js";
     import Header from "$lib/components/Header.svelte";
     import Footer from "$lib/components/Footer.svelte";
+    import OptimizeButton from "$lib/components/OptimizeButton.svelte";
     import {
         createInitialPage,
         generateChatTitle,
@@ -35,7 +36,7 @@
     // Original resizing state
     let leftPanelWidth = $state(70);
     let isResizing = $state(false);
-    let containerRef;
+    let containerRef: HTMLDivElement | undefined = $state();
 
     // Chat state
     let messages: ChatEvent[] = $state([]);
@@ -44,23 +45,38 @@
     let messagesContainer: HTMLElement | undefined = $state();
     let generatedHtml = $state(
         "<!-- Start by typing a command to create your page. -->",
-    ); // Initialize with a placeholder
+    );
     let lastBotRawMessageContent: string | null = $state(null);
     let currentProject: Project | undefined = $state(undefined);
     let iframeSizeMode = $state<"desktop" | "tablet" | "mobile">("desktop");
+    let hasOptimizedMessage = $state(false);
 
     const projectId = $page.params.id;
     const userId = "user-1";
 
+    const iframeViewportClasses = $derived(() => {
+        const transition = "transition-all duration-300 ease-in-out";
+        let baseClasses = "h-full"; // Ensures viewport tries to fill height
+
+        if (iframeSizeMode === "tablet") {
+            return `${baseClasses} w-[768px] bg-zinc-700 p-3 rounded-lg shadow-lg ${transition}`;
+        }
+        if (iframeSizeMode === "mobile") {
+            return `${baseClasses} w-[375px] bg-zinc-700 p-2 rounded-lg shadow-lg ${transition}`; // Changed to rounded-lg
+        }
+        // Desktop mode
+        return `${baseClasses} w-full ${transition}`;
+    });
+
     // Original resizing functions
-    function startResize(e) {
+    function startResize(e: MouseEvent) {
         isResizing = true;
         document.addEventListener("mousemove", handleResize);
         document.addEventListener("mouseup", stopResize);
         e.preventDefault();
     }
 
-    function handleResize(e) {
+    function handleResize(e: MouseEvent) {
         if (!isResizing || !containerRef) return;
 
         const containerRect = containerRef.getBoundingClientRect();
@@ -234,7 +250,9 @@
     function scrollToBottom(): void {
         if (messagesContainer) {
             setTimeout(() => {
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                if (messagesContainer) { // Double check after timeout
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
             }, 10);
         }
     }
@@ -598,29 +616,36 @@
 
             <!-- Iframe Container -->
             <div
-                class="flex-1 bg-zinc-800 m-4 border border-primary-accent rounded-md overflow-hidden p-1"
+                class="flex-1 bg-zinc-800 m-4 border border-primary-accent rounded-md overflow-hidden flex flex-col"
             >
-                <div
-                    class="{iframeContainerClasses} h-full bg-white rounded-sm overflow-hidden shadow-xl"
-                >
-                    {#if generatedHtml && generatedHtml.trim() !== "<!-- Start by typing a command to create your page. -->" && generatedHtml.trim() !== ""}
-                        <iframe
-                            srcdoc={iframeSrcDoc}
-                            class="w-full h-full border-0"
-                            title="Generated HTML Preview"
-                            sandbox="allow-scripts allow-same-origin"
-                        ></iframe>
-                    {:else}
-                        <div
-                            class="flex items-center justify-center h-full bg-white"
-                        >
-                            <span class="text-zinc-500"
-                                >{generatedHtml.includes("Start by typing")
-                                    ? "Start by typing a command to create your page."
-                                    : "No preview available. Generate content via chat."}</span
-                            >
-                        </div>
-                    {/if}
+                <!-- Sized Viewport (conditionally gray background, specific width for tablet/mobile) -->
+                <div class="{iframeViewportClasses} flex-grow">
+                    <!-- Actual Page Content Wrapper (always white background) -->
+                    <div class="w-full h-full bg-white {
+                        iframeSizeMode === 'tablet' ? 'rounded-md' : 
+                        iframeSizeMode === 'mobile' ? 'rounded-lg' : 
+                        'rounded-sm' 
+                    } shadow-xl overflow-hidden">
+                        {#if generatedHtml && generatedHtml.trim() !== "<!-- Start by typing a command to create your page. -->" && generatedHtml.trim() !== ""}
+                            {#key iframeSizeMode}
+                                <iframe
+                                    srcdoc={iframeSrcDoc}
+                                    class="w-full h-full border-0"
+                                    title="Generated HTML Preview"
+                                    sandbox="allow-scripts allow-same-origin"
+                                ></iframe>
+                            {/key}
+                        {:else}
+                            <!-- Placeholder content also needs to be inside the white wrapper -->
+                            <div class="flex items-center justify-center h-full">
+                                <span class="text-zinc-500">
+                                    {generatedHtml.includes("Start by typing")
+                                        ? "Start by typing a command to create your page."
+                                        : "No preview available. Generate content via chat."}
+                                </span>
+                            </div>
+                        {/if}
+                    </div>
                 </div>
             </div>
 
@@ -629,17 +654,17 @@
         </div>
 
         <!-- Resize Handle -->
-        <div
-            class="w-1 bg-primary-accent hover:bg-secondary-accent cursor-col-resize flex items-center justify-center group"
+        <button
+            type="button"
+            aria-label="Resize panels"
+            class="w-1 bg-primary-accent hover:bg-secondary-accent cursor-col-resize flex items-center justify-center group focus:outline-none"
             class:bg-secondary-accent={isResizing}
             onmousedown={startResize}
-            role="separator"
-            tabindex="0"
         >
             <GripVertical
                 class="w-3 h-6 text-dark-primary group-hover:text-dark-secondary transition-colors"
             />
-        </div>
+        </button>
 
         <!-- Chat Sidebar (Right) -->
         <div class="flex-1 flex flex-col">
@@ -664,14 +689,59 @@
             <!-- Input Area -->
             <div class="border-t border-zinc-800 p-4">
                 <div class="flex space-x-3">
-                    <textarea
-                        bind:value={messageInput}
-                        onkeypress={handleKeyPress}
-                        placeholder="Type your message or refinement instruction..."
-                        disabled={isLoading || showApiKeyModal}
-                        class="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-zinc-100 placeholder-zinc-400 resize-none focus:ring-2 focus:ring-zinc-600 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        rows="1"
-                    ></textarea>
+                    <div class="relative flex-1">
+                        <textarea
+                            bind:value={messageInput}
+                            onkeypress={handleKeyPress}
+                            disabled={isLoading}
+                            placeholder={isLoading
+                                ? "Processing..."
+                                : "Type your message or command..."}
+                            class="w-full p-3 pr-10 bg-zinc-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none scrollbar-thin scrollbar-thumb-zinc-600 scrollbar-track-zinc-700"
+                            rows="3"
+                        ></textarea>
+                        <div class="absolute top-2 right-2">
+                            <OptimizeButton
+                                text={messageInput}
+                                contextText={currentProject?.description}
+                                onOptimized={(optimizedText) => {
+                                    messageInput = optimizedText;
+                                    hasOptimizedMessage = true; // Optionally track if optimization was used
+                                }}
+                            />
+                        </div>
+                    </div>
+                    <button
+                        onclick={handleSendMessage}
+                        disabled={isLoading || !messageInput.trim()}
+                        class="bg-blue-600 text-white rounded-lg px-4 py-2 transition-all duration-200 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {#if isLoading}
+                            <svg
+                                class="animate-spin h-5 w-5 mr-3 -ml-1 text-white inline-block"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                            >
+                                <circle
+                                    class="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    stroke-width="4"
+                                ></circle>
+                                <path
+                                    class="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                                ></path>
+                            </svg>
+                        {/if}
+                        {#if !isLoading}
+                            <span>Send</span>
+                        {/if}
+                    </button>
                 </div>
             </div>
         </div>
@@ -684,51 +754,16 @@
         overflow-y: auto;
     }
 
-    .iframe-preview-wrapper {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        height: 100%;
-        overflow: auto;
-    }
-
+    /* Removed iframe-preview-wrapper and related styles as they are now handled by iframeViewportClasses and Tailwind */
     .iframe-content,
     .placeholder-content {
-        background-color: white;
-        box-shadow:
-            0 4px 6px -1px rgb(0 0 0 / 0.1),
-            0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-lg */
-        border: none; /* iframe default border */
-        transition:
-            width 0.3s ease-in-out,
-            height 0.3s ease-in-out;
-        border-radius: 0.5rem; /* rounded-lg */
+        /* These might still be useful if you have specific styling for the content itself, 
+           but general layout is now Tailwind-driven */
+        background-color: white; /* Ensure content background is white */
+        border: none;
+        border-radius: 0.125rem; /* rounded-sm for the inner white box */
     }
 
-    .iframe-preview-wrapper[data-size-mode="desktop"] .iframe-content,
-    .iframe-preview-wrapper[data-size-mode="desktop"] .placeholder-content {
-        width: 100%;
-        height: 100%;
-    }
-
-    .iframe-preview-wrapper[data-size-mode="tablet"] .iframe-content,
-    .iframe-preview-wrapper[data-size-mode="tablet"] .placeholder-content {
-        width: 768px; /* max-w-2xl */
-        height: 1024px; /* max-h-[1024px] */
-        max-width: 100%;
-        max-height: 100%;
-    }
-
-    .iframe-preview-wrapper[data-size-mode="mobile"] .iframe-content,
-    .iframe-preview-wrapper[data-size-mode="mobile"] .placeholder-content {
-        width: 384px; /* max-w-sm */
-        height: 844px; /* max-h-[844px] */
-        max-width: 100%;
-        max-height: 100%;
-    }
-
-    /* For placeholder specific styling beyond size/bg/shadow */
     .placeholder-content {
         display: flex;
         flex-direction: column;
@@ -736,6 +771,6 @@
         justify-content: center;
         text-align: center;
         padding: 2.5rem; /* p-10 */
-        color: initial; /* Reset color if needed from parent text-zinc-500 */
+        color: initial; 
     }
 </style>
