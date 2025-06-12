@@ -13,33 +13,3 @@
         </div>
     </div>
 </div>
-
-<style>
-    /* Styles specific to ServerMessage, using variables from app.css */
-    .message-group {
-        width: 100%;
-        padding: var(--spacing-3) 0;
-    }
-
-    .message {
-        display: flex;
-        justify-content: center; /* Center server messages */
-        width: 100%;
-    }
-
-    .message-content {
-        flex: 0 1 auto; /* Allow content to determine width, but not exceed container */
-        /* max-width: 80%; */ /* Limit width - Overridden by inline style */
-    }
-
-    .server-message-text {
-        color: var(--color-foreground-muted);
-        font-size: var(--font-size-sm);
-        text-align: center;
-        padding: var(--spacing-1) var(--spacing-3);
-        background-color: var(--color-background-alt);
-        border-radius: var(--radius-md);
-        width: fit-content; /* Fit content width */
-        margin: 0 auto; /* Center within the content area */
-    }
-</style>

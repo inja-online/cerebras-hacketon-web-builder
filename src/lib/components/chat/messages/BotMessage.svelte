@@ -90,58 +90,6 @@
 </div>
 
 <style>
-    /* Styles specific to BotMessage, using variables from app.css */
-    .message-group {
-        width: 100%;
-        padding: var(--spacing-3) 0;
-    }
-
-    .message {
-        position: relative; /* Ensure this is set for absolute positioning of actions */
-        display: flex;
-        gap: var(--spacing-2);
-        width: 100%;
-    }
-
-    .message-avatar {
-        display: flex;
-        align-items: flex-start;
-        flex-shrink: 0;
-    }
-
-    .message-content {
-        flex: 1;
-        min-width: 0;
-        position: relative;
-    }
-
-    .prose {
-        line-height: var(--line-height-relaxed);
-        word-break: break-word;
-        font-size: var(--font-size-sm);
-        color: var(--color-foreground); /* Bot message color */
-    }
-
-    .prose p {
-        margin: 0;
-    }
-
-    .prose pre {
-        background-color: var(--color-background-alt);
-        padding: var(--spacing-2);
-        border-radius: var(--radius-md);
-        overflow-x: auto;
-        font-size: var(--font-size-xs);
-        margin: var(--spacing-2) 0;
-    }
-
-    .prose code:not(pre code) {
-        background-color: var(--color-background-alt);
-        padding: var(--spacing-0-5) var(--spacing-1);
-        border-radius: var(--radius-sm);
-        font-size: var(--font-size-xs);
-    }
-
     .message-actions {
         position: absolute;
         top: -0.5rem; /* Adjust to be above the message bubble */

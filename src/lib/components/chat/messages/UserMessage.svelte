@@ -61,11 +61,6 @@
 </div>
 
 <style>
-    /* Styles specific to UserMessage, using variables from app.css */
-    .message-group {
-        width: 100%;
-        padding: var(--spacing-3) 0;
-    }
 
     .message {
         position: relative;
@@ -73,29 +68,6 @@
         gap: var(--spacing-2);
         width: 100%;
         justify-content: flex-end; /* Align user messages to the right */
-    }
-
-    .message-avatar {
-        display: flex;
-        align-items: flex-start;
-        flex-shrink: 0;
-    }
-
-    .message-content {
-        flex: 1;
-        min-width: 0;
-        position: relative;
-    }
-
-    .prose {
-        line-height: var(--line-height-relaxed);
-        word-break: break-word;
-        font-size: var(--font-size-sm);
-        color: var(--color-foreground); /* User message color */
-    }
-
-    .prose p {
-        margin: 0; /* Remove default paragraph margin */
     }
 
     .message-actions {

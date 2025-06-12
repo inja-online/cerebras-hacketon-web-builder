@@ -29,9 +29,3 @@
         {/each}
     </div>
 </div>
-
-<style>
-    .chat-view {
-        width: 100%;
-    }
-</style>
