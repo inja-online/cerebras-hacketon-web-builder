@@ -113,27 +113,7 @@
 </script>
 
 <div class="flex-1 bg-dark-secondary flex flex-col h-full">
-	<!-- Chat Model Selection -->
-	<div class="w-full max-w-md mx-auto mb-4">
-		<label for="chatModel" class="block text-xs font-medium text-zinc-400 mb-1 tracking-wide">Chat Model</label>
-		<p class="text-xs text-zinc-500 mb-2">Choose which AI model powers your chat. Each model has different strengths and context limits.</p>
-		<div class="relative flex gap-2 items-center">
-			<select
-				id="chatModel"
-				bind:value={chatModel}
-				class="w-full px-4 py-2.5 pr-10 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-100 focus:ring-2 focus:ring-primary-accent focus:border-primary-accent outline-none transition-colors duration-200 appearance-none shadow-sm hover:border-primary-accent/60"
-			>
-				{#each chatModels as model}
-					<option value={model.id}>{model.label} — {model.desc}</option>
-				{/each}
-			</select>
-			<!-- Custom dropdown arrow -->
-			<svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-			{#if hasChatModelChanges}
-				<button onclick={saveChatModel} class="px-3 py-1 bg-primary-accent text-white rounded-md text-xs hover:bg-zinc-600 transition-colors duration-200 shadow">Save</button>
-			{/if}
-		</div>
-	</div>
+	
 	<!-- Chat Messages -->
 	<ChatMessages {events} 
 		onDownloadHtmlFromMessage={onDownloadHtmlFromMessage}

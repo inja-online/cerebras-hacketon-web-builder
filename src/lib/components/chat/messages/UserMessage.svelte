@@ -31,7 +31,7 @@
 </script>
 
 <div class="message group flex justify-end">
-    <div class="message-actions">
+    <div class="message-actions" style="top: -0.8em;">
         {#if hasHtmlContent}
             <button title="Download HTML" class="action-button" onclick={handleDownload}>
                 <Download size={16} />
@@ -72,7 +72,7 @@
 
     .message-actions {
         position: absolute;
-        top: -0.5rem; /* Adjust to be above the message bubble */
+        top: -1.2rem; /* Adjust to be above the message bubble */
         right: 0.5rem; /* Align with the right side of the message bubble */
         display: flex;
         align-items: center;
