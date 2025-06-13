@@ -52,8 +52,8 @@
     >
         <Bot class="w-4 h-4 text-primary-accent" />
     </div>
-    <div class="flex-1 relative" style="max-width: 300px;"> <!-- Added relative for actions positioning -->
-        <div class="message-actions">
+    <div class="flex-1 relative" style="max-width: 300px;">
+        <div class="message-actions space-x-1.5">
             <button title="Retry generation" class="action-button" onclick={handleRetry}>
                 <RefreshCw size={16} />
             </button>
@@ -65,13 +65,13 @@
                     <History size={16} />
                 </button>
             {/if}
-            <div class="action-separator"></div>
+            <div class="action-separator mx-1.5"></div>
             <button title="Copy message" class="action-button" onclick={copyMessageContent}>
                 <Copy size={16} />
             </button>
         </div>
         <div
-            class="bg-dark-secondary border border-primary-accent rounded-lg p-3"
+            class="bg-dark-secondary border border-primary-accent rounded-lg p-3 mt-1"
         >
             <div
                 class="text-white text-sm prose prose-invert max-w-none"

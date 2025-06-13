@@ -4,11 +4,42 @@
 	import { settingsStorage, selectedModelKey, selectedProviderKey } from '$lib/storage';
 	import { onMount } from 'svelte';
 
-	const availableModels = $state([
-		{ provider: 'Cerebras', value: 'qwen/qwen3-32b', label: 'Qwen3 32B (Cerebras)' },
-		{ provider: 'Cerebras', value: 'meta-llama/llama-4-scout', label: 'Llama 4 Scout (Cerebras)' },
-        { provider: 'deepinfra/fp8', value: 'meta-llama/llama-4-maverick', label: 'Llama 4 Maverick (Parasail FP8)' },
-	]);
+	const chatModels = [
+		{
+			id: 'meta-llama/llama-3.1-8b-instruct',
+			label: 'Llama 3.1 8B Instruct',
+			desc: 'Fast, efficient. 131K ctx.'
+		},
+		{
+			id: 'qwen/qwen3-32b',
+			label: 'Qwen3 32B',
+			desc: 'Dense 32.8B, 131K ctx.'
+		},
+		{
+			id: 'meta-llama/llama-4-scout',
+			label: 'Llama 4 Scout',
+			desc: '17B MoE, 10M ctx.'
+		},
+		{
+			id: 'deepseek/deepseek-r1-distill-llama-70b',
+			label: 'DeepSeek R1 Distill Llama 70B',
+			desc: 'Distilled 70B, 128K ctx.'
+		},
+		{
+			id: 'meta-llama/llama-3.3-70b-instruct',
+			label: 'Llama 3.3 70B Instruct',
+			desc: 'Multilingual, 131K ctx.'
+		}
+	];
+
+	const availableModels = $state(
+		chatModels.map(m => ({
+			provider: 'Cerebras', // You can set provider logic here if needed
+			value: m.id,
+			label: m.label,
+			desc: m.desc
+		}))
+	);
 
 	let selectedModelValue = $state(availableModels[0].value); // Default to the first model
 	
