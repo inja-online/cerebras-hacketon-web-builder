@@ -6,6 +6,7 @@
     import MainPageInput from "$lib/components/MainPageInput.svelte";
     import RecentProjects from "$lib/components/RecentProjects.svelte";
     import Logo from "$lib/components/ui/Logo.svelte";
+    import Credit from '$lib/components/ui/Credit.svelte';
     let apiKeyPresent = $state(false);
 
     onMount(async () => {
@@ -60,11 +61,7 @@
         </div>
 
         <!-- Bottom Attribution -->
-        <div class="text-center">
-            <p class="text-text-muted text-xs">
-                Powered by Cerebras and OpenRouter API.
-            </p>
-        </div>
+        <Credit />
     {:else}
         <!-- Optional: Show a loading message or spinner while checking for the key -->
         <p class="text-zinc-400">Checking API Key...</p>

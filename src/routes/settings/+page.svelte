@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { Eye, EyeOff, ArrowLeft } from '@lucide/svelte';
 	import Logo from '$lib/components/ui/Logo.svelte';
+	import Credit from '$lib/components/ui/Credit.svelte';
 
 	let apiKey = $state('');
 	let originalApiKey = $state('');
@@ -601,7 +602,5 @@ async function saveOptimizerModel() {
 	</div>
 
 	<!-- Bottom Attribution -->
-	<div class="text-center">
-		<p class="text-text-muted text-xs">Powered by Cerebras and OpenRouter API.</p>
-	</div>
+	<Credit />
 </div>

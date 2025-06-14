@@ -3,6 +3,7 @@
     import { onMount } from "svelte";
     import { projectStorage, timeAgo } from "$lib/storage";
     import Logo from '$lib/components/ui/Logo.svelte';
+    import Credit from '$lib/components/ui/Credit.svelte';
 
     let allProjects = $state([]);
 
@@ -103,7 +104,5 @@
     </div>
 
     <!-- Bottom Attribution -->
-    <div class="text-center">
-        <p class="text-text-muted text-xs">Powered by Cerebras API</p>
-    </div>
+    <Credit />
 </div>
