@@ -3,6 +3,8 @@
 	import { settingsStorage, projectStorage, chatEventStorage } from '$lib/storage';
 	import { goto } from '$app/navigation';
 	import { Eye, EyeOff, ArrowLeft } from '@lucide/svelte';
+	import Logo from '$lib/components/ui/Logo.svelte';
+	import Credit from '$lib/components/ui/Credit.svelte';
 
 	let apiKey = $state('');
 	let originalApiKey = $state('');
@@ -382,9 +384,7 @@ async function saveOptimizerModel() {
 <div class="min-h-screen bg-dark-primary text-white p-8 flex flex-col">
 	<!-- Top Section with Brand and Back Link -->
 	<div class="flex justify-between items-start mb-16">
-		<a href="https://inja.online" target="_blank" class="text-2xl font-medium text-primary-accent tracking-wide">
-			INJA.ONLINE
-		</a>
+		<Logo />
 		<!-- Improved Back Button -->
 		<button
 			onclick={goBack}
@@ -602,7 +602,5 @@ async function saveOptimizerModel() {
 	</div>
 
 	<!-- Bottom Attribution -->
-	<div class="text-center">
-		<p class="text-text-muted text-xs">Powered by Cerebras and OpenRouter API.</p>
-	</div>
+	<Credit />
 </div>
