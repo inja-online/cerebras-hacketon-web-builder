@@ -1,7 +1,8 @@
 <script>
 	import { Globe, Settings } from "@lucide/svelte";
 	import Logo from '$lib/components/ui/Logo.svelte';
-	
+    import BroadcastLogo from "./ui/BroadcastLogo.svelte";
+    import { page } from "$app/stores";
 	let { project } = $props();
 </script>
 
@@ -10,7 +11,11 @@
 		<header class="flex items-center justify-between border-b border-primary-accent">
 			<div class="flex items-center gap-2">
 				<h1 class="text-2xl font-medium text-white flex items-center">
-					<Logo />
+                    {#if $page.url.pathname === '/'}
+                        <Logo />
+                    {:else}
+                        <BroadcastLogo />
+                    {/if}
 					<span class="builder-container"><span class="builder-text"> / Builder</span></span>
 				</h1>
 			</div>
