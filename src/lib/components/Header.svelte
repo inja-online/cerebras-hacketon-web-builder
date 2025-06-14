@@ -1,5 +1,6 @@
 <script>
 	import { Globe, Settings } from "@lucide/svelte";
+	import Logo from '$lib/components/ui/Logo.svelte';
 	
 	let { project } = $props();
 </script>
@@ -9,7 +10,8 @@
 		<header class="flex items-center justify-between border-b border-primary-accent">
 			<div class="flex items-center gap-2">
 				<h1 class="text-2xl font-medium text-white flex items-center">
-					<a href="https://inja.online" target="_blank" class="base-text mr-2">INJA.ONLINE</a><span class="builder-container"><span class="builder-text"> / Builder</span></span>
+					<Logo />
+					<span class="builder-container"><span class="builder-text"> / Builder</span></span>
 				</h1>
 			</div>
 		</header>

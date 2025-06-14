@@ -5,6 +5,7 @@
     import { Settings, SettingsIcon, BookOpen } from "@lucide/svelte";
     import MainPageInput from "$lib/components/MainPageInput.svelte";
     import RecentProjects from "$lib/components/RecentProjects.svelte";
+    import Logo from "$lib/components/ui/Logo.svelte";
     let apiKeyPresent = $state(false);
 
     onMount(async () => {
@@ -22,12 +23,7 @@
     {#if apiKeyPresent}
         <!-- Top Section with Brand and Blog Link -->
         <div class="flex justify-between items-start mb-16">
-            <a
-                href="https://inja.online"
-                target="_blank"
-                class="text-2xl font-medium text-primary-accent tracking-wide"
-                >INJA.ONLINE</a
-            >
+            <Logo />
             <div class="flex items-center space-x-4">
                 <a
                     class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-full text-primary-accent hover:bg-zinc-800 hover:border-primary-accent hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-accent transition-all duration-200 shadow-sm group animate-bounce-slow"

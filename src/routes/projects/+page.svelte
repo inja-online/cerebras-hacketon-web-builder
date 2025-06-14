@@ -2,6 +2,7 @@
     import { goto } from "$app/navigation";
     import { onMount } from "svelte";
     import { projectStorage, timeAgo } from "$lib/storage";
+    import Logo from '$lib/components/ui/Logo.svelte';
 
     let allProjects = $state([]);
 
@@ -36,9 +37,7 @@
 <div class="min-h-screen bg-dark-primary text-white p-8 flex flex-col">
     <!-- Top Section with Brand and Back Link -->
     <div class="flex justify-between items-start mb-16">
-        <a href="https://inja.online" target="_blank" class="text-2xl font-medium text-primary-accent tracking-wide">
-            INJA.ONLINE
-        </a>
+        <Logo />
         <button
             class="text-sm text-primary-accent hover:text-white transition-colors duration-200"
             onclick={goBack}
